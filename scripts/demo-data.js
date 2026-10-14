@@ -30,6 +30,5 @@ const DemoData = {
       startingXI: [],
       subs: []
     }
-  ],
-  tournament: null
+  ]
 };

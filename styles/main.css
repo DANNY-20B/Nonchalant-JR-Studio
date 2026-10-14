@@ -782,7 +782,7 @@ body {
 }
 
 /* ==========================================================================
-   SECTION B: TOURNAMENT TROPHY ROOM
+   SECTION B: PERSONAL TROPHY ROOM
    ========================================================================== */
 .trophy-cabinet-grid {
   display: grid;
@@ -1422,87 +1422,8 @@ body {
 }
 
 /* ==========================================================================
-   SECTION F: TOURNAMENT CENTRE (BRACKETS & STANDINGS)
+   TABLES & LEAGUE METRICS
    ========================================================================== */
-.tournament-view-switch {
-  display: flex;
-  gap: 0.6rem;
-  margin-bottom: 1.5rem;
-}
-
-.bracket-container {
-  display: flex;
-  justify-content: space-around;
-  gap: 2rem;
-  overflow-x: auto;
-  padding: 1.5rem 0.5rem;
-  min-height: 480px;
-}
-
-.bracket-round {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 260px;
-  position: relative;
-}
-
-.round-header-label {
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-gold);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 1rem;
-  padding: 0.3rem 0;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
-}
-
-.bracket-match-node {
-  background: rgba(20, 21, 29, 0.95);
-  border: 1px solid var(--gold-border);
-  border-radius: 8px;
-  overflow: hidden;
-  margin: 1rem 0;
-  cursor: pointer;
-  position: relative;
-  transition: var(--transition);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-}
-
-.bracket-match-node:hover {
-  border-color: var(--gold-bright);
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.45);
-  transform: translateY(-2px);
-}
-
-.bracket-team-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.65rem 0.9rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 0.9rem;
-}
-
-.bracket-team-row:last-child {
-  border-bottom: none;
-}
-
-.bracket-team-row.winner {
-  background: rgba(212, 175, 55, 0.12);
-  color: var(--gold-light);
-  font-weight: 700;
-}
-
-.bracket-score-val {
-  font-family: var(--font-mono);
-  font-weight: 800;
-  font-size: 1rem;
-}
 
 /* League Table */
 .league-table-wrap {
@@ -1916,207 +1837,515 @@ body {
   text-align: center;
 }
 
-/* Tournament Invite Modal & Share Channels */
-.invite-link-group {
-  display: flex;
-  gap: 0.6rem;
-  margin: 0.8rem 0;
-}
-
-.invite-link-input {
-  flex: 1;
-  background: rgba(9, 10, 15, 0.95);
-  border: 1px solid var(--gold-border);
-  border-radius: var(--border-radius-sm);
-  color: var(--gold-bright);
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  padding: 0.65rem 0.9rem;
-  outline: none;
-}
-
-.invite-link-input:focus {
-  border-color: var(--gold-bright);
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
-}
-
-.share-channels-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
-  margin: 1rem 0;
-}
-
-.btn-share-channel {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.65rem 1rem;
-  border-radius: var(--border-radius-sm);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  text-decoration: none;
-  transition: var(--transition);
-}
-
-.btn-share-whatsapp {
-  background: #25D366;
-  color: #fff !important;
-}
-
-.btn-share-whatsapp:hover {
-  background: #1ebc57;
-  box-shadow: 0 0 15px rgba(37, 211, 102, 0.4);
-  transform: translateY(-2px);
-}
-
-.btn-share-discord {
-  background: #5865F2;
-  color: #fff !important;
-}
-
-.btn-share-discord:hover {
-  background: #4752c4;
-  box-shadow: 0 0 15px rgba(88, 101, 242, 0.4);
-  transform: translateY(-2px);
-}
-
-.btn-share-native {
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid var(--gold-primary);
-  color: var(--gold-bright) !important;
-}
-
-.btn-share-native:hover {
-  background: var(--gold-primary);
-  color: #070709 !important;
-  transform: translateY(-2px);
-}
-
-.qr-card {
-  background: rgba(12, 13, 19, 0.8);
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  border-radius: var(--border-radius-sm);
-  padding: 1.2rem;
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.qr-code-img {
-  width: 170px;
-  height: 170px;
-  border-radius: 8px;
-  border: 2px solid var(--gold-primary);
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-  margin: 0.6rem auto;
-  display: block;
-}
-
-.lan-tip-box {
-  background: rgba(255, 215, 0, 0.05);
-  border: 1px dashed rgba(212, 175, 55, 0.35);
-  border-radius: var(--border-radius-sm);
-  padding: 0.75rem 1rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 1rem;
-  display: flex;
-  gap: 0.6rem;
-  align-items: flex-start;
-}
-
-/* Tournament Match History & Champions Archive */
-.tournament-matches-grid {
+/* Personal Match History & Highlights Grid */
+.personal-matches-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
 }
 
-.tournament-match-card {
-  background: rgba(14, 15, 22, 0.9);
+/* ==========================================================================
+   STUDIO PANELS & CARDS
+   ========================================================================== */
+
+/* Room Cards Grid */
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.2rem;
+}
+
+.room-card {
+  background: var(--bg-card);
   border: 1px solid var(--gold-border);
-  border-radius: var(--border-radius-sm);
-  padding: 1rem 1.2rem;
+  border-radius: var(--border-radius);
+  padding: 1.4rem;
   transition: var(--transition);
   position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.tournament-match-card:hover {
+.room-card:hover {
   border-color: var(--gold-bright);
-  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
-  transform: translateY(-2px);
+  box-shadow: var(--gold-glow);
+  transform: translateY(-3px);
 }
 
-.tournament-match-stage {
+.room-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.room-code-tag {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--gold-bright);
-  text-transform: uppercase;
-  margin-bottom: 0.6rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tournament-match-teams {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0.5rem 0;
-}
-
-.tournament-match-team {
+  font-size: 0.82rem;
   font-weight: 700;
-  font-size: 0.95rem;
-  color: #fff;
-  max-width: 42%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tournament-match-team.winner {
   color: var(--gold-bright);
-}
-
-.tournament-match-score {
-  font-family: var(--font-mono);
-  font-size: 1.25rem;
-  font-weight: 800;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--gold-border);
   padding: 0.2rem 0.6rem;
   border-radius: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  color: #fff;
+  letter-spacing: 1px;
 }
 
-.tournament-match-winner-tag {
+.room-privacy-chip {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.room-privacy-chip.private {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.room-privacy-chip.public {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.room-card-title {
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  color: #fff;
+  margin-bottom: 0.3rem;
+}
+
+.room-card-desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 1rem;
+  min-height: 2.4rem;
+}
+
+.room-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
   font-size: 0.8rem;
-  color: var(--win-color);
-  margin-top: 0.4rem;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.room-card-meta span {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-weight: 600;
 }
 
-.tournament-champions-banner {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(14, 15, 22, 0.9) 100%);
-  border: 2px solid var(--gold-bright);
+.room-card-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+/* Active Room Detail View Banner */
+.active-room-banner {
+  background: linear-gradient(135deg, rgba(20, 22, 32, 0.95) 0%, rgba(12, 13, 19, 0.98) 100%);
+  border: 1px solid var(--gold-border);
   border-radius: var(--border-radius);
-  padding: 1.2rem 1.6rem;
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.active-room-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.active-room-title {
+  font-family: var(--font-title);
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.room-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.room-tab-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.room-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.room-tab-btn.active {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--gold-border);
+  color: var(--gold-bright);
+}
+
+/* Participant Roster Table & Cards */
+.participants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.participant-card {
+  background: rgba(14, 15, 22, 0.85);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: var(--transition);
+}
+
+.participant-card:hover {
+  border-color: var(--gold-bright);
+}
+
+.participant-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.participant-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-primary);
+  object-fit: cover;
+  background: #000;
+}
+
+.participant-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.participant-role-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 0.2rem;
+}
+
+.role-host {
+  background: rgba(255, 215, 0, 0.2);
+  color: var(--gold-bright);
+  border: 1px solid var(--gold-bright);
+}
+
+.role-moderator {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  border: 1px solid #3498db;
+}
+
+.role-member {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+/* Room Chat Hub */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 480px;
+  background: rgba(10, 11, 16, 0.8);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.chat-messages-box {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  position: relative;
+}
+
+.chat-bubble.mine {
+  align-self: flex-end;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(170, 130, 10, 0.25) 100%);
+  border: 1px solid var(--gold-border);
+  color: #fff;
+}
+
+.chat-bubble.theirs {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.chat-sender-name {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--gold-bright);
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chat-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.chat-input-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  background: rgba(15, 16, 24, 0.9);
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.chat-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--gold-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--gold-bright);
+}
+
+/* Announcements Feed */
+.announcement-card {
+  background: rgba(14, 15, 22, 0.9);
+  border-left: 4px solid var(--gold-bright);
+  border-radius: var(--border-radius-sm);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.announcement-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+  margin-bottom: 0.5rem;
 }
+
+.announcement-title {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  color: #fff;
+}
+
+/* Match Status Badges & Verification Workflows */
+.match-status-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.status-scheduled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+.status-awaiting_confirmation {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+  border: 1px solid #f1c40f;
+  animation: pulse-gold 2s infinite;
+}
+
+.status-confirmed {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+}
+
+.status-disputed {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 5px rgba(241, 196, 15, 0.4); }
+  50% { box-shadow: 0 0 15px rgba(241, 196, 15, 0.8); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 5px rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.8); }
+}
+
+/* Dispute Notice Banner */
+.dispute-notice-box {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  padding: 0.8rem;
+  font-size: 0.82rem;
+  color: #ff9999;
+  margin-top: 0.6rem;
+}
+
+/* Supabase Connection Status Pill */
+.supabase-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.supabase-status-pill.connected {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+  color: #2ecc71;
+}
+
+.supabase-status-pill.disconnected {
+  background: rgba(241, 196, 15, 0.15);
+  border: 1px solid rgba(241, 196, 15, 0.4);
+  color: #f1c40f;
+}
+
+.supabase-status-pill:hover {
+  transform: scale(1.04);
+}
+
+/* Notifications Bell & Dropdown */
+.notification-bell-btn {
+  background: none;
+  border: 1px solid var(--gold-border);
+  color: var(--gold-light);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition);
+}
+
+.notification-bell-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--gold-bright);
+}
+
+.notif-badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+}
+
+/* Mobile Responsive Optimization for Tables and Brackets */
+@media (max-width: 900px) {
+  .studio-navbar {
+    padding: 0 1rem;
+    height: auto;
+    min-height: 70px;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .nav-links {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+  }
+  
+  .active-room-top {
+    flex-direction: column;
+  }
+  
+  .bracket-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1.5rem;
+  }
+}
+
 
 

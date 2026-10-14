@@ -1,69 +1,107 @@
 /**
- * NONCHALANT JR STUDIO - Main Application Engine
- * Fresh clean state: zero dummy matches, zero fake trophies, empty squads ready to build,
- * and custom Tournament Creator with Friends.
+ * NONCHALANT JR STUDIO — Private eFootball Gaming Archive
+ * Main Client Controller
+ * 
+ * Exclusively for a single user's personal archive:
+ * - Dashboard with live figures (zero fake metrics)
+ * - Complete Match History with CRUD, search, filter, and sort
+ * - Match Recordings & Highlights Vault (Supabase private storage upload + streaming)
+ * - Trophy Room & Cup History (pedestal honors)
+ * - Game Plans & Tactical Lab (interactive drag-and-drop pitch chalkboard)
+ * - Starting Eleven & Squad Management (Starting XI, bench, coach boosts, set-piece roles)
+ * - Personal Statistics & Performance Telemetry (Canvas line, doughnut, and bar charts)
+ * - Deep Personal Match Archive (chronological match-to-video-to-trophy timeline)
+ * - Structured Backup Export & Validated Restore
+ * - Gamer Identity & Supabase Cloud Engine Configuration
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Application State
+document.addEventListener('DOMContentLoaded', async () => {
+  // =========================================================================
+  // APPLICATION STATE
+  // =========================================================================
   const AppState = {
     currentUser: null,
+    activeSection: 'dashboard',
     matches: [],
+    recordings: [],
     trophies: [],
-    tactics: [],
-    squads: [],
-    tournament: null,
-    activeSection: 'recordings',
-    activeTacticIndex: 0,
-    tournamentFriends: ['NONCHALANT JR'] // Default participant
+    gamePlans: [],
+    activeGamePlanIndex: 0,
+    squad: null,
+    editingMatchId: null,
+    filters: {
+      matchSearch: '',
+      matchResult: 'all',
+      matchCompetition: 'all',
+      matchSort: 'newest',
+      recordingSearch: '',
+      trophyTier: 'all'
+    }
   };
 
-  // DOM Elements Cache
+  // =========================================================================
+  // DOM ELEMENT REFERENCES
+  // =========================================================================
   const UI = {
     // Navigation
     navItems: document.querySelectorAll('.nav-item'),
     sections: document.querySelectorAll('.studio-section'),
+    userAvatarBadge: document.getElementById('user-avatar-badge'),
+    userAvatar: document.getElementById('user-avatar'),
     userGamerTag: document.getElementById('user-gamer-tag'),
     userDivision: document.getElementById('user-division'),
-    userAvatar: document.getElementById('user-avatar'),
-    currentTime: document.getElementById('live-clock'),
+    supabaseStatusPill: document.getElementById('supabase-status-pill'),
+    supabaseStatusText: document.getElementById('supabase-status-text'),
+    btnQuickRecordMatch: document.getElementById('btn-quick-record-match'),
 
-    // Hero stats
+    // Hero Counters
     heroMatchesCount: document.getElementById('hero-matches-count'),
     heroWinRate: document.getElementById('hero-win-rate'),
     heroTrophiesCount: document.getElementById('hero-trophies-count'),
     heroVideosCount: document.getElementById('hero-videos-count'),
 
-    // Section A: Match Recordings
+    // Dashboard
+    dashboardRecentMatches: document.getElementById('dashboard-recent-matches'),
+    dashboardTrophyShowcase: document.getElementById('dashboard-trophy-showcase'),
+    dashboardTacticsSummary: document.getElementById('dashboard-tactics-summary'),
+
+    // Match History
+    matchesHistoryGrid: document.getElementById('matches-history-grid'),
+    btnNewMatchOpen: document.getElementById('btn-new-match-open'),
+    searchMatchesInput: document.getElementById('search-matches-input'),
+    filterMatchResult: document.getElementById('filter-match-result'),
+    filterMatchCompetition: document.getElementById('filter-match-competition'),
+    sortMatchesSelect: document.getElementById('sort-matches-select'),
+
+    // Recordings Vault
     recordingsGrid: document.getElementById('recordings-grid'),
+    btnUploadRecordingModal: document.getElementById('btn-upload-recording-modal'),
     searchRecordings: document.getElementById('search-recordings'),
-    filterCompetition: document.getElementById('filter-competition'),
-    filterResult: document.getElementById('filter-result'),
-    btnNewRecording: document.getElementById('btn-new-recording'),
 
-    // Section B: Trophy Room
+    // Trophy Room
     trophiesGrid: document.getElementById('trophies-grid'),
-    filterTrophyTier: document.getElementById('filter-trophy-tier'),
     btnNewTrophy: document.getElementById('btn-new-trophy'),
+    filterTrophyTier: document.getElementById('filter-trophy-tier'),
 
-    // Section C: Tactics
-    tacticsPitch: document.getElementById('tactics-field'),
+    // Tactical Lab
+    tacticsField: document.getElementById('tactics-field'),
     tacticsControlsPanel: document.getElementById('tactics-controls-panel'),
     btnCreateTactic: document.getElementById('btn-create-tactic'),
+    btnDuplicateTactic: document.getElementById('btn-duplicate-tactic'),
     btnEditTactic: document.getElementById('btn-edit-tactic'),
     btnDeleteTactic: document.getElementById('btn-delete-tactic'),
 
-    // Section D: Squads
+    // Squad Management
     managerName: document.getElementById('manager-name'),
     managerPlaystyle: document.getElementById('manager-playstyle'),
     managerBoost: document.getElementById('manager-boost'),
     startingXiGrid: document.getElementById('starting-xi-grid'),
     subsRow: document.getElementById('subs-row'),
     rolesList: document.getElementById('roles-list'),
-    btnEditCoach: document.getElementById('btn-edit-coach'),
     btnAddPlayer: document.getElementById('btn-add-player'),
+    btnEditCoach: document.getElementById('btn-edit-coach'),
 
-    // Section E: Statistics
+    // Statistics & Charts
     kpiMatches: document.getElementById('kpi-matches'),
     kpiWins: document.getElementById('kpi-wins'),
     kpiDraws: document.getElementById('kpi-draws'),
@@ -77,782 +115,1535 @@ document.addEventListener('DOMContentLoaded', () => {
     chartTrajectory: document.getElementById('chart-trajectory'),
     chartResultsDoughnut: document.getElementById('chart-results-doughnut'),
     chartGoalsBar: document.getElementById('chart-goals-bar'),
+    opponentsStatsTbody: document.getElementById('opponents-stats-tbody'),
 
-    // Section F: Tournament
-    bracketContainer: document.getElementById('bracket-tree-container'),
-    leagueStandingsTbody: document.getElementById('league-standings-tbody'),
-    tournamentMatchesLogContainer: document.getElementById('tournament-matches-log-container'),
-    btnCrownChampion: document.getElementById('btn-crown-champion'),
-    btnCreateTournament: document.getElementById('btn-create-tournament'),
-    btnInviteTournament: document.getElementById('btn-invite-tournament'),
-    btnRecordTourneyMatch: document.getElementById('btn-record-tourney-match'),
-    modalRecordTourneyMatch: document.getElementById('modal-record-tourney-match'),
-    formRecordTourneyMatch: document.getElementById('form-record-tourney-match'),
-    tourneyMatchStageSelect: document.getElementById('tourney-match-stage-select'),
-    tourneyMatchTeam1Select: document.getElementById('tourney-match-team1-select'),
-    tourneyMatchScore1Input: document.getElementById('tourney-match-score1-input'),
-    tourneyMatchTeam2Select: document.getElementById('tourney-match-team2-select'),
-    tourneyMatchScore2Input: document.getElementById('tourney-match-score2-input'),
-    tourneyMatchDateInput: document.getElementById('tourney-match-date-input'),
+    // Archive
+    personalArchiveTimeline: document.getElementById('personal-archive-timeline'),
+
+    // Backup & Restore
+    btnExportBackupMain: document.getElementById('btn-export-backup-main'),
+    fileImportBackupMain: document.getElementById('file-import-backup-main'),
+
+    // Settings
+    formSettingsProfile: document.getElementById('form-settings-profile'),
+    settingsGamertagInput: document.getElementById('settings-gamertag-input'),
+    settingsDivisionInput: document.getElementById('settings-division-input'),
+    settingsEfootballId: document.getElementById('settings-efootball-id'),
+    settingsPlatformInput: document.getElementById('settings-platform-input'),
+    btnStudioLogout: document.getElementById('btn-studio-logout'),
 
     // Modals
     modalNewMatch: document.getElementById('modal-new-match'),
+    modalMatchTitle: document.getElementById('modal-match-title'),
+    formNewMatch: document.getElementById('form-new-match'),
+    matchEditId: document.getElementById('match-edit-id'),
+    matchOpponent: document.getElementById('match-opponent'),
+    matchCompetition: document.getElementById('match-competition'),
+    matchMyScore: document.getElementById('match-my-score'),
+    matchOppScore: document.getElementById('match-opp-score'),
+    matchDate: document.getElementById('match-date'),
+    matchTypeSelect: document.getElementById('match-type-select'),
+    matchFormationSelect: document.getElementById('match-formation-select'),
+    matchManagerInput: document.getElementById('match-manager-input'),
+    matchGoalscorers: document.getElementById('match-goalscorers'),
+    matchVideoFile: document.getElementById('match-video-file'),
+    matchVideoUrl: document.getElementById('match-video-url'),
+    matchNotes: document.getElementById('match-notes'),
+    uploadProgressWrap: document.getElementById('upload-progress-wrap'),
+    uploadProgressFill: document.getElementById('upload-progress-fill'),
+    uploadProgressText: document.getElementById('upload-progress-text'),
+
+    modalMatchDetails: document.getElementById('modal-match-details'),
+    matchDetailsBody: document.getElementById('match-details-body'),
+
+    modalNewRecording: document.getElementById('modal-new-recording'),
+    formNewRecording: document.getElementById('form-new-recording'),
+    recTitleInput: document.getElementById('rec-title-input'),
+    recFileInput: document.getElementById('rec-file-input'),
+    recProgressWrap: document.getElementById('rec-progress-wrap'),
+    recProgressFill: document.getElementById('rec-progress-fill'),
+    recProgressText: document.getElementById('rec-progress-text'),
+    recTagsInput: document.getElementById('rec-tags-input'),
+    recDescInput: document.getElementById('rec-desc-input'),
+
     modalNewTrophy: document.getElementById('modal-new-trophy'),
+    formNewTrophy: document.getElementById('form-new-trophy'),
+    trophyTitleInput: document.getElementById('trophy-title-input'),
+    trophyPlacementInput: document.getElementById('trophy-placement-input'),
+    trophyDateInput: document.getElementById('trophy-date-input'),
+    trophyOpponentInput: document.getElementById('trophy-opponent-input'),
+    trophyScoreInput: document.getElementById('trophy-score-input'),
+    trophyNotesInput: document.getElementById('trophy-notes-input'),
+
     modalCinemaPlayer: document.getElementById('modal-cinema-player'),
-    modalAccount: document.getElementById('modal-account'),
-    modalRecovery: document.getElementById('modal-recovery'),
-    modalBackups: document.getElementById('modal-backups'),
-    modalCreateTournament: document.getElementById('modal-create-tournament'),
-    modalEditCoach: document.getElementById('modal-edit-coach'),
-    modalAddPlayer: document.getElementById('modal-add-player'),
-    modalCreateTactic: document.getElementById('modal-create-tactic'),
-    modalEditTactic: document.getElementById('modal-edit-tactic'),
-    modalInviteTournament: document.getElementById('modal-invite-tournament'),
-    modalJoinTournament: document.getElementById('modal-join-tournament'),
-
-    // Tournament Invite / Join Elements
-    tournamentInviteUrl: document.getElementById('tournament-invite-url'),
-    btnCopyInviteLink: document.getElementById('btn-copy-invite-link'),
-    btnShareWhatsapp: document.getElementById('btn-share-whatsapp'),
-    btnShareDiscord: document.getElementById('btn-share-discord'),
-    btnShareNative: document.getElementById('btn-share-native'),
-    inviteQrImage: document.getElementById('invite-qr-image'),
-    inviteTourneyNameDisplay: document.getElementById('invite-tourney-name-display'),
-    inviteTourneyHostDisplay: document.getElementById('invite-tourney-host-display'),
-    inviteFriendGamertag: document.getElementById('invite-friend-gamertag'),
-    btnInviteAddFriend: document.getElementById('btn-invite-add-friend'),
-    formJoinTournament: document.getElementById('form-join-tournament'),
-    joinFriendGamertag: document.getElementById('join-friend-gamertag'),
-    joinTourneyName: document.getElementById('join-tourney-name'),
-    joinTourneyInviter: document.getElementById('join-tourney-inviter'),
-
-    // Tournament Friends Builder
-    inputFriendName: document.getElementById('input-friend-name'),
-    btnAddFriendPill: document.getElementById('btn-add-friend-pill'),
-    friendsListWrap: document.getElementById('friends-list-wrap'),
-
-    // Cinema Player
-    cinemaVideoPlayer: document.getElementById('cinema-video-player'),
     cinemaVideoTitle: document.getElementById('cinema-video-title'),
     cinemaVideoMeta: document.getElementById('cinema-video-meta'),
+    cinemaVideoPlayer: document.getElementById('cinema-video-player'),
     cinemaDownloadBtn: document.getElementById('cinema-download-btn'),
 
-    // Toast Container
+    modalCreateTactic: document.getElementById('modal-create-tactic'),
+    formCreateTactic: document.getElementById('form-create-tactic'),
+    tacticNameInput: document.getElementById('tactic-name-input'),
+    tacticFormationInput: document.getElementById('tactic-formation-input'),
+    tacticPlaystyleInput: document.getElementById('tactic-playstyle-input'),
+    tacticManagerInput: document.getElementById('tactic-manager-input'),
+    tacticDescInput: document.getElementById('tactic-desc-input'),
+    tacticWhentouseInput: document.getElementById('tactic-whentouse-input'),
+    tacticAtk1Input: document.getElementById('tactic-atk1-input'),
+    tacticAtk2Input: document.getElementById('tactic-atk2-input'),
+    tacticDef1Input: document.getElementById('tactic-def1-input'),
+    tacticDef2Input: document.getElementById('tactic-def2-input'),
+
+    modalEditCoach: document.getElementById('modal-edit-coach'),
+    formEditCoach: document.getElementById('form-edit-coach'),
+    coachNameInput: document.getElementById('coach-name-input'),
+    coachPlaystyleInput: document.getElementById('coach-playstyle-input'),
+    coachBoostInput: document.getElementById('coach-boost-input'),
+    roleCaptainInput: document.getElementById('role-captain-input'),
+    rolePenaltyInput: document.getElementById('role-penalty-input'),
+    roleShortfkInput: document.getElementById('role-shortfk-input'),
+    roleLongfkInput: document.getElementById('role-longfk-input'),
+
+    modalAddPlayer: document.getElementById('modal-add-player'),
+    formAddPlayer: document.getElementById('form-add-player'),
+    playerSlotInput: document.getElementById('player-slot-input'),
+    playerPosInput: document.getElementById('player-pos-input'),
+    playerNameInput: document.getElementById('player-name-input'),
+    playerRatingInput: document.getElementById('player-rating-input'),
+    playerTierInput: document.getElementById('player-tier-input'),
+
+    modalSupabaseConfig: document.getElementById('modal-supabase-config'),
+    formSupabaseConfig: document.getElementById('form-supabase-config'),
+    supabaseUrlInput: document.getElementById('supabase-url-input'),
+    supabaseKeyInput: document.getElementById('supabase-key-input'),
+    supabaseTestFeedback: document.getElementById('supabase-test-feedback'),
+    btnSupabaseReset: document.getElementById('btn-supabase-reset'),
+
+    modalAuthHub: document.getElementById('modal-auth-hub'),
+    tabBtnSignin: document.getElementById('tab-btn-signin'),
+    tabBtnResetpass: document.getElementById('tab-btn-resetpass'),
+    formAuthSignin: document.getElementById('form-auth-signin'),
+    formAuthResetpass: document.getElementById('form-auth-resetpass'),
+    signinEmail: document.getElementById('signin-email'),
+    signinPassword: document.getElementById('signin-password'),
+    resetEmail: document.getElementById('reset-email'),
+
     toastContainer: document.getElementById('toast-container')
   };
 
-  // --- INITIALIZATION ---
-  const initApp = async () => {
-    await StorageEngine.initDB();
-    AppState.currentUser = AuthEngine.getCurrentUser();
-
-    // Check version flag to wipe legacy dummy data once
-    const CLEAN_KEY = 'njr_studio_clean_v2';
-    if (!localStorage.getItem(CLEAN_KEY)) {
-      localStorage.removeItem(StorageEngine.getStorageKey ? StorageEngine.getStorageKey('matches', AppState.currentUser.id) : `njr_studio_${AppState.currentUser.id}_matches`);
-      localStorage.removeItem(StorageEngine.getStorageKey ? StorageEngine.getStorageKey('trophies', AppState.currentUser.id) : `njr_studio_${AppState.currentUser.id}_trophies`);
-      localStorage.removeItem(StorageEngine.getStorageKey ? StorageEngine.getStorageKey('squads', AppState.currentUser.id) : `njr_studio_${AppState.currentUser.id}_squads`);
-      localStorage.removeItem(StorageEngine.getStorageKey ? StorageEngine.getStorageKey('tournament', AppState.currentUser.id) : `njr_studio_${AppState.currentUser.id}_tournament`);
-      localStorage.setItem(CLEAN_KEY, 'true');
-    }
-
-    // Wipe legacy tactics to provide clean slate for user
-    const TACTICS_CLEAN_KEY = 'njr_studio_tactics_wipe_v1';
-    if (!localStorage.getItem(TACTICS_CLEAN_KEY)) {
-      const tKey = StorageEngine.getStorageKey ? StorageEngine.getStorageKey('tactics', AppState.currentUser.id) : `njr_studio_${AppState.currentUser.id}_tactics`;
-      localStorage.removeItem(tKey);
-      localStorage.setItem(TACTICS_CLEAN_KEY, 'true');
-    }
-
-    loadUserData();
-    updateClock();
-    setInterval(updateClock, 1000);
-    renderUserProfile();
-
-    setupNavigation();
-    setupModals();
-    setupForms();
-
-    renderAllSections();
-    checkIncomingInvite();
-    fetchServerTournament();
-    setInterval(fetchServerTournament, 4000);
-  };
-
-  // Load User Data
-  const loadUserData = () => {
-    const uid = AppState.currentUser.id;
-
-    AppState.matches = StorageEngine.loadData('matches', [], uid);
-    AppState.trophies = StorageEngine.loadData('trophies', [], uid);
-
-    AppState.tactics = StorageEngine.loadData('tactics', [], uid);
-    if (Array.isArray(AppState.tactics)) {
-      AppState.tactics = AppState.tactics.filter(t => t.id !== 'tactic_default');
-    } else {
-      AppState.tactics = [];
-    }
-    StorageEngine.saveData('tactics', AppState.tactics, uid);
-
-    AppState.squads = StorageEngine.loadData('squads', null, uid);
-    if (!AppState.squads || AppState.squads.length === 0) {
-      AppState.squads = [...DemoData.squads];
-      StorageEngine.saveData('squads', AppState.squads, uid);
-    }
-
-    AppState.tournament = StorageEngine.loadData('tournament', null, uid);
-    if (AppState.tournament) {
-      AppState.tournament.matchLog = AppState.tournament.matchLog || [];
-      AppState.tournament.championsHistory = AppState.tournament.championsHistory || [];
-      syncTournamentWithServer();
-    }
-  };
-
-  // Update Clock Display
-  const updateClock = () => {
-    const now = new Date();
-    if (UI.currentTime) {
-      UI.currentTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' UTC';
-    }
-  };
-
-  // Render User Profile In Top Deck
-  const renderUserProfile = () => {
-    if (!AppState.currentUser) return;
-    const tag = AppState.currentUser.gamerTag || 'NONCHALANT JR';
-    const div = AppState.currentUser.division || 'Division 1 (Top 100)';
-    if (UI.userGamerTag) UI.userGamerTag.textContent = tag;
-    if (UI.userDivision) UI.userDivision.textContent = div;
-    const heroTag = document.getElementById('user-gamer-tag');
-    if (heroTag) heroTag.textContent = tag;
-    const heroDiv = document.getElementById('user-division');
-    if (heroDiv) heroDiv.textContent = div;
-  };
-
-  // Toast Notification
-  const showToast = (message) => {
+  // =========================================================================
+  // TOAST & MODAL HELPERS
+  // =========================================================================
+  const showToast = (message, type = 'info') => {
     if (!UI.toastContainer) return;
     const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerHTML = `
-      <i class="fas fa-check-circle" style="color: var(--gold-bright); font-size: 1.1rem;"></i>
-      <span style="font-size: 0.9rem;">${message}</span>
-    `;
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+    toast.innerHTML = `<i class="fas ${icon}" style="color: var(--gold-bright);"></i> <span>${escapeHtml(message)}</span>`;
     UI.toastContainer.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';
-      toast.style.transform = 'translateX(100%)';
+      toast.style.transform = 'translateY(10px)';
       setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    }, 4000);
   };
 
-  // --- NAVIGATION ---
-  const setupNavigation = () => {
+  const openModal = (modal) => {
+    if (modal) {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+  const closeModal = (modal) => {
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      // Stop video playback if cinema player closed
+      if (modal === UI.modalCinemaPlayer && UI.cinemaVideoPlayer) {
+        UI.cinemaVideoPlayer.pause();
+        UI.cinemaVideoPlayer.src = '';
+      }
+    }
+  };
+
+  // Wire all modal close triggers
+  document.querySelectorAll('.btn-close-modal, .btn-modal-cancel').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const modal = e.target.closest('.modal-overlay');
+      if (modal) closeModal(modal);
+    });
+  });
+
+  document.querySelectorAll('.modal-overlay').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal(modal);
+    });
+  });
+
+  // =========================================================================
+  // INITIALIZATION & DATA LOADING
+  // =========================================================================
+  const initApp = async () => {
+    // 1. Establish User Session
+    AppState.currentUser = AuthEngine.getCurrentUser();
+    updateUserUI(AppState.currentUser);
+
+    // 2. Check Supabase Connectivity
+    updateSupabaseStatusUI();
+
+    // 3. Load All Personal Studio Records
+    await loadAllStudioData();
+
+    // 4. Bind UI Event Listeners
+    setupNavigationListeners();
+    setupMatchEventListeners();
+    setupRecordingEventListeners();
+    setupTrophyEventListeners();
+    setupTacticsEventListeners();
+    setupSquadEventListeners();
+    setupBackupEventListeners();
+    setupSettingsEventListeners();
+    setupAuthEventListeners();
+
+    // 5. Render Initial Dashboard View
+    switchSection('dashboard');
+    console.log('⚡ NONCHALANT JR STUDIO loaded successfully.');
+  };
+
+  const updateUserUI = (user) => {
+    if (!user) return;
+    if (UI.userGamerTag) UI.userGamerTag.textContent = user.gamerTag || 'NONCHALANT JR';
+    if (UI.userDivision) UI.userDivision.textContent = user.division || 'Division 1 (Top 100)';
+    if (UI.userAvatar && user.avatarUrl) UI.userAvatar.src = user.avatarUrl;
+
+    if (UI.settingsGamertagInput) UI.settingsGamertagInput.value = user.gamerTag || 'NONCHALANT JR';
+    if (UI.settingsDivisionInput) UI.settingsDivisionInput.value = user.division || 'Division 1 (Top 100)';
+    if (UI.settingsEfootballId) UI.settingsEfootballId.value = user.efootballId || 'NJR-904-8821';
+    if (UI.settingsPlatformInput) UI.settingsPlatformInput.value = user.platform || 'PlayStation 5 & Mobile';
+  };
+
+  const updateSupabaseStatusUI = () => {
+    const isReady = window.SupabaseBridge && SupabaseBridge.isReady();
+    if (UI.supabaseStatusPill) {
+      if (isReady) {
+        UI.supabaseStatusPill.classList.remove('disconnected');
+        UI.supabaseStatusPill.classList.add('connected');
+        if (UI.supabaseStatusText) UI.supabaseStatusText.textContent = 'Cloud Engine Online';
+      } else {
+        UI.supabaseStatusPill.classList.remove('connected');
+        UI.supabaseStatusPill.classList.add('disconnected');
+        if (UI.supabaseStatusText) UI.supabaseStatusText.textContent = 'Local Offline Vault';
+      }
+    }
+  };
+
+  const loadAllStudioData = async () => {
+    try {
+      // Matches
+      AppState.matches = await SupabaseBridge.matches.getAllMatches(
+        {
+          search: AppState.filters.matchSearch,
+          result: AppState.filters.matchResult,
+          competition: AppState.filters.matchCompetition
+        },
+        AppState.filters.matchSort
+      );
+
+      // Recordings
+      AppState.recordings = await SupabaseBridge.recordings.getAllRecordings(AppState.filters.recordingSearch);
+
+      // Trophies
+      AppState.trophies = await SupabaseBridge.trophies.getAllTrophies(AppState.filters.trophyTier);
+
+      // Game Plans
+      AppState.gamePlans = await SupabaseBridge.gamePlans.getAllGamePlans();
+
+      // Squad Setups
+      const allSquads = await SupabaseBridge.squads.getAllSquads();
+      AppState.squad = allSquads && allSquads.length > 0 ? allSquads[0] : getDefaultSquad();
+
+      // Update Top Hero Counters immediately
+      updateHeroMetrics();
+    } catch (err) {
+      console.warn('Error fetching studio records, using local fallback:', err);
+      // Fallback from localStorage
+      const uid = AppState.currentUser ? AppState.currentUser.id : 'default';
+      AppState.matches = StorageEngine.loadData('matches', [], uid);
+      AppState.trophies = StorageEngine.loadData('trophies', [], uid);
+      AppState.gamePlans = StorageEngine.loadData('tactics', [], uid);
+      const savedSquads = StorageEngine.loadData('squads', [], uid);
+      AppState.squad = savedSquads && savedSquads.length > 0 ? savedSquads[0] : getDefaultSquad();
+      updateHeroMetrics();
+    }
+  };
+
+  const getDefaultSquad = () => {
+    return {
+      id: 'squad_default',
+      squad_name: 'Primary Starting XI',
+      manager: { name: 'Pep Guardiola', playstyle: 'Quick Counter', boost: '+1 Acceleration' },
+      roles: { captain: 'Lionel Messi', penalty: 'Cristiano Ronaldo', shortFK: 'Lionel Messi', longFK: 'Roberto Carlos' },
+      starting_xi: [
+        { id: 'p1', pos: 'GK', name: 'T. Courtois', rating: 98, tier: 'Epic Booster' },
+        { id: 'p2', pos: 'LB', name: 'Roberto Carlos', rating: 101, tier: 'Big Time' },
+        { id: 'p3', pos: 'CB', name: 'P. Maldini', rating: 103, tier: 'Epic Booster' },
+        { id: 'p4', pos: 'CB', name: 'A. Nesta', rating: 101, tier: 'Big Time' },
+        { id: 'p5', pos: 'RB', name: 'Cafu', rating: 100, tier: 'Epic Booster' },
+        { id: 'p6', pos: 'DMF', name: 'P. Vieira', rating: 104, tier: 'Epic Booster' },
+        { id: 'p7', pos: 'DMF', name: 'F. Rijkaard', rating: 101, tier: 'Big Time' },
+        { id: 'p8', pos: 'AMF', name: 'K. De Bruyne', rating: 100, tier: 'Show Time' },
+        { id: 'p9', pos: 'LWF', name: 'Neymar Jr', rating: 102, tier: 'Big Time' },
+        { id: 'p10', pos: 'CF', name: 'K. Mbappé', rating: 103, tier: 'Show Time' },
+        { id: 'p11', pos: 'RWF', name: 'L. Messi', rating: 105, tier: 'Big Time' }
+      ],
+      subs: [
+        { id: 's1', pos: 'CF', name: 'C. Ronaldo', rating: 101, tier: 'Show Time' },
+        { id: 's2', pos: 'AMF', name: 'Ronaldinho', rating: 103, tier: 'Epic Booster' },
+        { id: 's3', pos: 'CMF', name: 'L. Modrić', rating: 99, tier: 'Highlight' },
+        { id: 's4', pos: 'CB', name: 'V. van Dijk', rating: 99, tier: 'Highlight' },
+        { id: 's5', pos: 'GK', name: 'Alisson', rating: 97, tier: 'Standard' }
+      ],
+      formation: '4-2-1-3',
+      is_active: true
+    };
+  };
+
+  const updateHeroMetrics = () => {
+    const total = AppState.matches.length;
+    const wins = AppState.matches.filter(m => m.result === 'W').length;
+    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const trophiesCount = AppState.trophies.filter(t => t.placement === 'champion').length;
+    const clipsCount = AppState.recordings.length;
+
+    if (UI.heroMatchesCount) UI.heroMatchesCount.textContent = total;
+    if (UI.heroWinRate) UI.heroWinRate.textContent = `${winRate}%`;
+    if (UI.heroTrophiesCount) UI.heroTrophiesCount.textContent = trophiesCount;
+    if (UI.heroVideosCount) UI.heroVideosCount.textContent = clipsCount;
+  };
+
+  // =========================================================================
+  // NAVIGATION & VIEW SWITCHING
+  // =========================================================================
+  const switchSection = (targetSectionId) => {
+    AppState.activeSection = targetSectionId;
+
+    // Update Navbar active styles
+    UI.navItems.forEach(item => {
+      if (item.dataset.section === targetSectionId) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+
+    // Show active section, hide others
+    UI.sections.forEach(sec => {
+      if (sec.id === `section-${targetSectionId}`) {
+        sec.classList.add('active');
+      } else {
+        sec.classList.remove('active');
+      }
+    });
+
+    // Render section-specific view
+    switch (targetSectionId) {
+      case 'dashboard':
+        renderDashboard();
+        break;
+      case 'matches':
+        renderMatches();
+        break;
+      case 'recordings':
+        renderRecordings();
+        break;
+      case 'trophies':
+        renderTrophies();
+        break;
+      case 'tactics':
+        renderTactics();
+        break;
+      case 'squads':
+        renderSquads();
+        break;
+      case 'stats':
+        renderStatistics();
+        break;
+      case 'archive':
+        renderArchive();
+        break;
+      case 'backup':
+        // Ready for backup actions
+        break;
+      case 'settings':
+        updateUserUI(AppState.currentUser);
+        break;
+    }
+
+    // Scroll to top cleanly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const setupNavigationListeners = () => {
     UI.navItems.forEach(item => {
       item.addEventListener('click', () => {
         const target = item.dataset.section;
-        if (!target) return;
-
-        UI.navItems.forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-
-        UI.sections.forEach(sec => {
-          if (sec.id === `section-${target}`) {
-            sec.classList.add('active');
-          } else {
-            sec.classList.remove('active');
-          }
-        });
-
-        AppState.activeSection = target;
-        if (target === 'stats') {
-          setTimeout(renderStatistics, 50);
-        }
+        if (target) switchSection(target);
       });
     });
-  };
 
-  // Render All Sections
-  const renderAllSections = () => {
-    renderHeroStats();
-    renderMatchRecordings();
-    renderTrophyRoom();
-    renderTactics();
-    renderSquads();
-    renderStatistics();
-    renderTournament();
-  };
+    if (UI.btnQuickRecordMatch) {
+      UI.btnQuickRecordMatch.addEventListener('click', () => {
+        openRecordMatchModal();
+      });
+    }
 
-  // --- HERO STATS ---
-  const renderHeroStats = () => {
-    const totalMatches = AppState.matches.length;
-    const wins = AppState.matches.filter(m => m.result === 'W').length;
-    const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0;
-    const trophiesCount = AppState.trophies.filter(t => t.placement === 'champion').length;
+    if (UI.userAvatarBadge) {
+      UI.userAvatarBadge.addEventListener('click', () => {
+        switchSection('settings');
+      });
+    }
 
-    if (UI.heroMatchesCount) UI.heroMatchesCount.textContent = totalMatches;
-    if (UI.heroWinRate) UI.heroWinRate.textContent = `${winRate}%`;
-    if (UI.heroTrophiesCount) UI.heroTrophiesCount.textContent = trophiesCount;
-    if (UI.heroVideosCount) UI.heroVideosCount.textContent = totalMatches;
+    if (UI.supabaseStatusPill) {
+      UI.supabaseStatusPill.addEventListener('click', () => {
+        openSupabaseConfigModal();
+      });
+    }
   };
 
   // =========================================================================
-  // SECTION A: MATCH RECORDINGS (FRESH EMPTY STATE READY FOR USER)
+  // 1. DASHBOARD
   // =========================================================================
-  const renderMatchRecordings = () => {
-    if (!UI.recordingsGrid) return;
+  const renderDashboard = () => {
+    updateHeroMetrics();
 
-    const searchTerm = (UI.searchRecordings ? UI.searchRecordings.value.toLowerCase() : '');
-    const compFilter = (UI.filterCompetition ? UI.filterCompetition.value : 'all');
-    const resultFilter = (UI.filterResult ? UI.filterResult.value : 'all');
-
-    const filtered = AppState.matches.filter(m => {
-      const matchSearch = m.opponent.toLowerCase().includes(searchTerm) ||
-                          (m.notes && m.notes.toLowerCase().includes(searchTerm)) ||
-                          (m.tags && m.tags.some(t => t.toLowerCase().includes(searchTerm)));
-      const matchComp = (compFilter === 'all' || m.competition === compFilter);
-      const matchRes = (resultFilter === 'all' || m.result === resultFilter);
-      return matchSearch && matchComp && matchRes;
-    });
-
-    if (filtered.length === 0) {
-      UI.recordingsGrid.innerHTML = `
-        <div class="empty-state-box" style="grid-column: 1/-1;">
-          <i class="fas fa-video empty-state-icon"></i>
-          <h3 class="empty-state-title">No Match Recordings Yet</h3>
-          <p class="empty-state-desc">
-            Your studio archive is completely fresh! Record your eFootball matches, upload screen-recorded gameplay clips, and celebrate your best goals here.
-          </p>
-          <button class="btn-gold" onclick="document.getElementById('modal-new-match').classList.add('active')">
-            <i class="fas fa-plus-circle"></i> Record Your First Match
-          </button>
-        </div>
-      `;
-      return;
-    }
-
-    UI.recordingsGrid.innerHTML = filtered.map(m => {
-      const resultClass = m.result === 'W' ? 'win' : (m.result === 'D' ? 'draw' : 'loss');
-      const tagHtml = (m.tags || []).map(t => `<span class="tag-badge">#${t}</span>`).join('');
-
-      return `
-        <div class="recording-card" data-match-id="${m.id}">
-          <div class="video-thumb-container" onclick="window.playRecordingVideo('${m.id}')">
-            <img src="${m.thumbUrl || 'assets/bg.jpg'}" alt="Match Thumbnail" class="video-thumb">
-            <span class="competition-badge">${m.competition}</span>
-            <div class="play-overlay-btn"><i class="fas fa-play"></i></div>
-            <span class="duration-badge"><i class="fas fa-clock"></i> Gameplay Clip</span>
-          </div>
-          <div class="recording-info">
-            <div class="match-scoreline-header">
-              <span class="opponent-title">vs ${m.opponent}</span>
-              <span class="score-pill ${resultClass}">${m.myScore} - ${m.oppScore}</span>
-            </div>
-            <div class="recording-meta">
-              <span><i class="far fa-calendar-alt"></i> ${m.date}</span>
-              <span style="color: var(--text-gold);"><i class="fas fa-shield-alt"></i> ${m.teamUsed || 'NONCHALANT JR XI'}</span>
-            </div>
-            <div class="tag-list">${tagHtml}</div>
-            <p class="recording-notes">${m.notes || 'No notes added.'}</p>
-            <div class="recording-card-footer">
-              <button class="btn-gold" style="padding: 0.35rem 0.8rem; font-size: 0.8rem;" onclick="window.playRecordingVideo('${m.id}')">
-                <i class="fas fa-play"></i> Watch
-              </button>
-              <div style="display: flex; gap: 0.4rem;">
-                <button class="btn-icon" title="Download Gameplay Video" onclick="window.downloadRecording('${m.id}')">
-                  <i class="fas fa-download"></i>
-                </button>
-                <button class="btn-icon danger" title="Delete Recording" onclick="window.deleteRecording('${m.id}')">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  };
-
-  // Video Playback Trigger
-  window.playRecordingVideo = async (matchId) => {
-    const match = AppState.matches.find(m => m.id === matchId);
-    if (!match) return;
-
-    if (UI.cinemaVideoTitle) UI.cinemaVideoTitle.textContent = `NONCHALANT JR vs ${match.opponent} (${match.myScore} - ${match.oppScore})`;
-    if (UI.cinemaVideoMeta) UI.cinemaVideoMeta.textContent = `${match.competition} • ${match.date}`;
-
-    let videoSource = match.videoUrl;
-    if (match.mediaStorageId) {
-      try {
-        const stored = await StorageEngine.getMediaUrl(match.mediaStorageId);
-        if (stored && stored.url) videoSource = stored.url;
-      } catch (e) {
-        console.warn('Error fetching video:', e);
-      }
-    }
-
-    if (UI.cinemaVideoPlayer) {
-      UI.cinemaVideoPlayer.src = videoSource || 'assets/bg.jpg';
-      UI.cinemaVideoPlayer.load();
-      UI.cinemaVideoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
-    }
-
-    if (UI.cinemaDownloadBtn) {
-      UI.cinemaDownloadBtn.onclick = () => window.downloadRecording(matchId);
-    }
-
-    if (UI.modalCinemaPlayer) UI.modalCinemaPlayer.classList.add('active');
-  };
-
-  window.deleteRecording = async (matchId) => {
-    if (!confirm('Delete this match recording?')) return;
-    const match = AppState.matches.find(m => m.id === matchId);
-    if (match && match.mediaStorageId) {
-      await StorageEngine.deleteMedia(match.mediaStorageId);
-    }
-    AppState.matches = AppState.matches.filter(m => m.id !== matchId);
-    StorageEngine.saveData('matches', AppState.matches, AppState.currentUser.id);
-    renderMatchRecordings();
-    renderHeroStats();
-    renderStatistics();
-    showToast('Match recording deleted.');
-  };
-
-  window.downloadRecording = async (matchId) => {
-    const match = AppState.matches.find(m => m.id === matchId);
-    if (!match) return;
-    const a = document.createElement('a');
-    a.href = match.videoUrl || 'assets/bg.jpg';
-    a.download = `NONCHALANT_JR_vs_${match.opponent}_${match.date}.mp4`;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  // =========================================================================
-  // SECTION B: TOURNAMENT TROPHY ROOM (FRESH EMPTY STATE)
-  // =========================================================================
-  const renderTrophyRoom = () => {
-    if (!UI.trophiesGrid) return;
-
-    const tierFilter = (UI.filterTrophyTier ? UI.filterTrophyTier.value : 'all');
-    const filtered = AppState.trophies.filter(t => {
-      if (tierFilter === 'all') return true;
-      return t.placement === tierFilter;
-    });
-
-    if (filtered.length === 0) {
-      UI.trophiesGrid.innerHTML = `
-        <div class="empty-state-box" style="grid-column: 1/-1;">
-          <i class="fas fa-trophy empty-state-icon"></i>
-          <h3 class="empty-state-title">Trophy Cabinet Awaiting Your Championships</h3>
-          <p class="empty-state-desc">
-            No tournaments or trophies logged yet. As you win championships with your friends or online events, log them here to put your silverware on the pedestal!
-          </p>
-          <button class="btn-gold" onclick="document.getElementById('modal-new-trophy').classList.add('active')">
-            <i class="fas fa-trophy"></i> Log Tournament Cup
-          </button>
-        </div>
-      `;
-      return;
-    }
-
-    UI.trophiesGrid.innerHTML = filtered.map(t => {
-      const tierBadgeClass = t.placement === 'champion' ? 'tier-gold' : (t.placement === 'runner_up' ? 'tier-silver' : 'tier-bronze');
-      const tierBadgeText = t.placement === 'champion' ? 'CHAMPION' : (t.placement === 'runner_up' ? 'RUNNER-UP' : 'HONOR');
-      const icon = t.iconEmoji || (t.placement === 'champion' ? '🏆' : '🥈');
-
-      return `
-        <div class="trophy-card">
-          <span class="trophy-tier-badge ${tierBadgeClass}">${tierBadgeText}</span>
-          <div class="trophy-pedestal-visual">
-            <div class="trophy-glow-halo"></div>
-            <div class="trophy-icon-wrapper">${icon}</div>
-          </div>
-          <h3 class="trophy-title">${t.title}</h3>
-          <div class="trophy-date"><i class="far fa-calendar-alt"></i> ${t.date}</div>
-          <div class="final-match-stats">
-            <div class="final-match-label">Grand Final Scoreline</div>
-            <div class="final-match-teams">NONCHALANT JR vs ${t.finalOpponent}</div>
-            <div class="final-match-score">${t.finalScore}</div>
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.2rem; line-height: 1.4;">
-            ${t.notes || 'Championship recorded in the studio hall of fame.'}
-          </p>
-          <div style="display: flex; gap: 0.6rem; justify-content: center;">
-            <button class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;" onclick="window.deleteTrophy('${t.id}')">
-              <i class="fas fa-trash-alt"></i> Delete
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  };
-
-  window.deleteTrophy = (trophyId) => {
-    if (!confirm('Remove this achievement from your Trophy Room?')) return;
-    AppState.trophies = AppState.trophies.filter(t => t.id !== trophyId);
-    StorageEngine.saveData('trophies', AppState.trophies, AppState.currentUser.id);
-    renderTrophyRoom();
-    renderHeroStats();
-    showToast('Trophy removed.');
-  };
-
-  // =========================================================================
-  // SECTION C: GAME PLANS & TACTICS
-  // =========================================================================
-  const getFormationNodes = (formation) => {
-    switch (formation) {
-      case '4-2-1-3':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'LB', name: 'Left Back', x: 18, y: 75, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 38, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 62, y: 78, rating: 90 },
-          { role: 'RB', name: 'Right Back', x: 82, y: 75, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 38, y: 64, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 62, y: 64, rating: 90 },
-          { role: 'AMF', name: 'Att Midfielder', x: 50, y: 44, rating: 90 },
-          { role: 'LWF', name: 'Left Winger', x: 20, y: 24, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 50, y: 18, rating: 90 },
-          { role: 'RWF', name: 'Right Winger', x: 80, y: 24, rating: 90 }
-        ];
-      case '4-4-2':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'LB', name: 'Left Back', x: 18, y: 75, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 38, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 62, y: 78, rating: 90 },
-          { role: 'RB', name: 'Right Back', x: 82, y: 75, rating: 90 },
-          { role: 'LMF', name: 'Left Mid', x: 18, y: 48, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 38, y: 52, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 62, y: 52, rating: 90 },
-          { role: 'RMF', name: 'Right Mid', x: 82, y: 48, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 38, y: 20, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 62, y: 20, rating: 90 }
-        ];
-      case '4-1-2-3':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'LB', name: 'Left Back', x: 18, y: 75, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 38, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 62, y: 78, rating: 90 },
-          { role: 'RB', name: 'Right Back', x: 82, y: 75, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 50, y: 64, rating: 90 },
-          { role: 'AMF', name: 'Att Midfielder', x: 36, y: 44, rating: 90 },
-          { role: 'AMF', name: 'Att Midfielder', x: 64, y: 44, rating: 90 },
-          { role: 'LWF', name: 'Left Winger', x: 20, y: 24, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 50, y: 18, rating: 90 },
-          { role: 'RWF', name: 'Right Winger', x: 80, y: 24, rating: 90 }
-        ];
-      case '3-2-4-1':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'CB', name: 'Left CB', x: 28, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 50, y: 80, rating: 90 },
-          { role: 'CB', name: 'Right CB', x: 72, y: 78, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 38, y: 62, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 62, y: 62, rating: 90 },
-          { role: 'LMF', name: 'Left Mid', x: 18, y: 42, rating: 90 },
-          { role: 'AMF', name: 'Att Midfielder', x: 38, y: 38, rating: 90 },
-          { role: 'AMF', name: 'Att Midfielder', x: 62, y: 38, rating: 90 },
-          { role: 'RMF', name: 'Right Mid', x: 82, y: 42, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 50, y: 18, rating: 90 }
-        ];
-      case '5-2-3':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'LWB', name: 'Left Wingback', x: 15, y: 68, rating: 90 },
-          { role: 'CB', name: 'Left CB', x: 32, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 50, y: 80, rating: 90 },
-          { role: 'CB', name: 'Right CB', x: 68, y: 78, rating: 90 },
-          { role: 'RWB', name: 'Right Wingback', x: 85, y: 68, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 38, y: 52, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 62, y: 52, rating: 90 },
-          { role: 'LWF', name: 'Left Winger', x: 20, y: 24, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 50, y: 18, rating: 90 },
-          { role: 'RWF', name: 'Right Winger', x: 80, y: 24, rating: 90 }
-        ];
-      case '4-2-2-2':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'LB', name: 'Left Back', x: 18, y: 75, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 38, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 62, y: 78, rating: 90 },
-          { role: 'RB', name: 'Right Back', x: 82, y: 75, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 38, y: 62, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 62, y: 62, rating: 90 },
-          { role: 'AMF', name: 'Left AMF', x: 30, y: 42, rating: 90 },
-          { role: 'AMF', name: 'Right AMF', x: 70, y: 42, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 38, y: 20, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 62, y: 20, rating: 90 }
-        ];
-      case '3-4-3':
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'CB', name: 'Left CB', x: 30, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 50, y: 80, rating: 90 },
-          { role: 'CB', name: 'Right CB', x: 70, y: 78, rating: 90 },
-          { role: 'LMF', name: 'Left Mid', x: 18, y: 50, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 38, y: 52, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 62, y: 52, rating: 90 },
-          { role: 'RMF', name: 'Right Mid', x: 82, y: 50, rating: 90 },
-          { role: 'LWF', name: 'Left Winger', x: 20, y: 24, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 50, y: 18, rating: 90 },
-          { role: 'RWF', name: 'Right Winger', x: 80, y: 24, rating: 90 }
-        ];
-      case '4-3-3':
-      case 'Custom':
-      default:
-        return [
-          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, rating: 90, isGK: true },
-          { role: 'LB', name: 'Left Back', x: 18, y: 75, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 38, y: 78, rating: 90 },
-          { role: 'CB', name: 'Centre Back', x: 62, y: 78, rating: 90 },
-          { role: 'RB', name: 'Right Back', x: 82, y: 75, rating: 90 },
-          { role: 'DMF', name: 'Def Midfielder', x: 50, y: 62, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 35, y: 48, rating: 90 },
-          { role: 'CMF', name: 'Cent Midfielder', x: 65, y: 48, rating: 90 },
-          { role: 'LWF', name: 'Left Winger', x: 20, y: 24, rating: 90 },
-          { role: 'CF', name: 'Centre Forward', x: 50, y: 18, rating: 90 },
-          { role: 'RWF', name: 'Right Winger', x: 80, y: 24, rating: 90 }
-        ];
-    }
-  };
-
-  const renderTactics = () => {
-    // If no tactics exist, render clean empty states ready for user's own game plans
-    if (!AppState.tactics || AppState.tactics.length === 0) {
-      if (UI.btnEditTactic) UI.btnEditTactic.style.display = 'none';
-      if (UI.btnDeleteTactic) UI.btnDeleteTactic.style.display = 'none';
-
-      // Clear pitch player nodes and show chalkboard banner
-      if (UI.tacticsPitch) {
-        const existingNodes = UI.tacticsPitch.querySelectorAll('.player-node, .empty-pitch-banner');
-        existingNodes.forEach(n => n.remove());
-
-        const banner = document.createElement('div');
-        banner.className = 'empty-pitch-banner';
-        banner.innerHTML = `
-          <i class="fas fa-clipboard-list gold-text"></i>
-          <h4>Clean Tactical Chalkboard</h4>
-          <p>All preset game plans have been cleared. Build your own custom formation, select your playstyle, and position your players on the pitch!</p>
-          <button class="btn-gold" style="padding: 0.5rem 1.2rem; font-size: 0.85rem;" onclick="document.getElementById('modal-create-tactic').classList.add('active')">
-            <i class="fas fa-plus-circle"></i> Create Game Plan
-          </button>
-        `;
-        UI.tacticsPitch.appendChild(banner);
-      }
-
-      // Empty Controls Panel
-      if (UI.tacticsControlsPanel) {
-        UI.tacticsControlsPanel.innerHTML = `
-          <div class="tactics-empty-state">
-            <i class="fas fa-chess-board empty-state-icon"></i>
-            <h3 class="empty-state-title">No Game Plans Added</h3>
-            <p class="empty-state-desc">
-              Your tactical chalkboard is completely clean. Click "Create Game Plan" below to configure your formation (4-3-3, 4-2-1-3, 5-2-3, etc.), team playstyle, and individual player instructions.
+    // 1. Recent Matches (Last 4)
+    if (UI.dashboardRecentMatches) {
+      const recent = AppState.matches.slice(0, 4);
+      if (recent.length === 0) {
+        UI.dashboardRecentMatches.innerHTML = `
+          <div class="empty-state-box" style="padding: 1.5rem; text-align: center;">
+            <i class="fas fa-futbol empty-state-icon" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+            <h4 style="color: #fff; font-size: 1rem; margin-bottom: 0.3rem;">No Matches Recorded Yet</h4>
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              Log your eFootball victories to build your authoritative personal archive.
             </p>
-            <button class="btn-gold" onclick="document.getElementById('modal-create-tactic').classList.add('active')">
-              <i class="fas fa-plus-circle"></i> Create Your First Game Plan
-            </button>
-          </div>
-        `;
-      }
-      return;
-    }
-
-    // When tactics exist:
-    if (UI.btnEditTactic) UI.btnEditTactic.style.display = 'inline-flex';
-    if (UI.btnDeleteTactic) UI.btnDeleteTactic.style.display = 'inline-flex';
-
-    if (AppState.activeTacticIndex >= AppState.tactics.length) {
-      AppState.activeTacticIndex = 0;
-    }
-    const currentTactic = AppState.tactics[AppState.activeTacticIndex] || AppState.tactics[0];
-
-    // Render Controls Panel
-    if (UI.tacticsControlsPanel) {
-      UI.tacticsControlsPanel.innerHTML = `
-        <div class="glass-panel">
-          <div class="tactics-card-header">
-            <span class="gold-text" style="font-size: 0.85rem; font-family: var(--font-mono); text-transform: uppercase;">Active Strategy Preset</span>
-            <div class="preset-selector-row" id="tactics-presets-container">
-              ${AppState.tactics.map((tac, idx) => `
-                <button class="preset-pill ${idx === AppState.activeTacticIndex ? 'active' : ''}" onclick="window.switchTactic(${idx})">
-                  ${tac.formation} • ${tac.name.split('(')[0].trim()}
-                </button>
-              `).join('')}
-            </div>
-          </div>
-
-          <h3 style="font-family: var(--font-title); font-size: 1.4rem; margin-bottom: 0.4rem;">${currentTactic.name}</h3>
-          <div style="font-family: var(--font-mono); font-size: 0.9rem; color: var(--gold-bright); margin-bottom: 1rem;">Playstyle: ${currentTactic.playstyle}</div>
-          <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1.2rem; line-height: 1.6;">
-            ${currentTactic.description || 'Custom tactical game plan.'}
-          </p>
-
-          <div class="playstyle-box">
-            <div class="playstyle-title">
-              <i class="fas fa-lightbulb"></i> When to Deploy This Game Plan
-            </div>
-            <p style="font-size: 0.88rem; color: var(--text-secondary);">
-              ${currentTactic.whenToUse || 'Primary tactical setup.'}
-            </p>
-          </div>
-
-          <h4 style="font-family: var(--font-mono); font-size: 0.85rem; text-transform: uppercase; color: var(--gold-light); margin-bottom: 0.8rem;">
-            Individual Player Instructions
-          </h4>
-          <div class="instructions-grid">
-            <div class="instruction-item"><div class="instruction-type">Attacking 1</div><div class="instruction-value">${currentTactic.instructions ? (currentTactic.instructions.attacking1 || 'None') : 'None'}</div></div>
-            <div class="instruction-item"><div class="instruction-type">Attacking 2</div><div class="instruction-value">${currentTactic.instructions ? (currentTactic.instructions.attacking2 || 'None') : 'None'}</div></div>
-            <div class="instruction-item"><div class="instruction-type">Defensive 1</div><div class="instruction-value">${currentTactic.instructions ? (currentTactic.instructions.defensive1 || 'None') : 'None'}</div></div>
-            <div class="instruction-item"><div class="instruction-type">Defensive 2</div><div class="instruction-value">${currentTactic.instructions ? (currentTactic.instructions.defensive2 || 'None') : 'None'}</div></div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Render interactive pitch player nodes
-    if (UI.tacticsPitch) {
-      const existingNodes = UI.tacticsPitch.querySelectorAll('.player-node, .empty-pitch-banner');
-      existingNodes.forEach(n => n.remove());
-
-      if (currentTactic.nodes && currentTactic.nodes.length > 0) {
-        currentTactic.nodes.forEach((node) => {
-          const el = document.createElement('div');
-          el.className = `player-node ${node.isGK ? 'gk' : ''}`;
-          el.style.left = `${node.x}%`;
-          el.style.top = `${node.y}%`;
-          el.title = `Double-click to rename ${node.name} (${node.role})`;
-          el.innerHTML = `
-            <div class="player-token">${node.role}</div>
-            <div class="player-name-tag">${node.name}</div>
-          `;
-
-          let isDragging = false;
-
-          const onStartDrag = (e) => {
-            isDragging = true;
-            if (e.cancelable && e.type === 'touchstart') e.preventDefault();
-            document.addEventListener('mousemove', onMoveDrag);
-            document.addEventListener('mouseup', onEndDrag);
-            document.addEventListener('touchmove', onMoveDrag, { passive: false });
-            document.addEventListener('touchend', onEndDrag);
-          };
-
-          const onMoveDrag = (e) => {
-            if (!isDragging) return;
-            const rect = UI.tacticsPitch.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            let newX = Math.round(((clientX - rect.left) / rect.width) * 100);
-            let newY = Math.round(((clientY - rect.top) / rect.height) * 100);
-            newX = Math.max(5, Math.min(95, newX));
-            newY = Math.max(5, Math.min(95, newY));
-            el.style.left = `${newX}%`;
-            el.style.top = `${newY}%`;
-            node.x = newX;
-            node.y = newY;
-          };
-
-          const onEndDrag = () => {
-            if (isDragging) {
-              isDragging = false;
-              document.removeEventListener('mousemove', onMoveDrag);
-              document.removeEventListener('mouseup', onEndDrag);
-              document.removeEventListener('touchmove', onMoveDrag);
-              document.removeEventListener('touchend', onEndDrag);
-              StorageEngine.saveData('tactics', AppState.tactics, AppState.currentUser.id);
-            }
-          };
-
-          el.addEventListener('mousedown', onStartDrag);
-          el.addEventListener('touchstart', onStartDrag, { passive: false });
-
-          // Double click to rename player or role
-          el.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            const newName = prompt(`Enter player name for position ${node.role}:`, node.name);
-            if (newName && newName.trim()) {
-              node.name = newName.trim();
-              StorageEngine.saveData('tactics', AppState.tactics, AppState.currentUser.id);
-              renderTactics();
-            }
-          });
-
-          UI.tacticsPitch.appendChild(el);
-        });
-      }
-    }
-  };
-
-  window.switchTactic = (index) => {
-    AppState.activeTacticIndex = index;
-    renderTactics();
-  };
-
-  // =========================================================================
-  // SECTION D: SQUAD SETUPS (USER BUILDS COACH & PLAYERS)
-  // =========================================================================
-  const renderSquads = () => {
-    if (!AppState.squads || AppState.squads.length === 0) return;
-    const squad = AppState.squads[0];
-
-    if (UI.managerName) UI.managerName.textContent = squad.manager.name;
-    if (UI.managerPlaystyle) UI.managerPlaystyle.textContent = squad.manager.playstyle;
-    if (UI.managerBoost) UI.managerBoost.textContent = squad.manager.boost;
-
-    // Starting XI Cards
-    if (UI.startingXiGrid) {
-      if (squad.startingXI.length === 0) {
-        UI.startingXiGrid.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary); border: 1px dashed var(--gold-border); border-radius: var(--border-radius-sm);">
-            <i class="fas fa-users" style="font-size: 2rem; color: var(--gold-primary); margin-bottom: 0.6rem; display: block;"></i>
-            <h4 style="color: #fff; margin-bottom: 0.3rem;">No Starting Players Added</h4>
-            <p style="font-size: 0.85rem; margin-bottom: 1rem;">Build your dream starting eleven by clicking "Add Player".</p>
-            <button class="btn-gold" style="font-size: 0.82rem; padding: 0.4rem 1rem;" onclick="document.getElementById('modal-add-player').classList.add('active')">
-              <i class="fas fa-plus"></i> Add Player
+            <button class="btn-gold" onclick="document.getElementById('btn-quick-record-match').click()">
+              <i class="fas fa-plus-circle"></i> Record First Match
             </button>
           </div>
         `;
       } else {
-        UI.startingXiGrid.innerHTML = squad.startingXI.map((p, idx) => `
-          <div class="player-card-slot">
-            <button class="btn-icon danger" style="position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; font-size: 0.7rem;" title="Remove Player" onclick="window.removePlayer('startingXI', ${idx})">
-              <i class="fas fa-times"></i>
-            </button>
-            <div class="player-top-row">
-              <span class="player-pos-badge">${p.pos}</span>
-              <span class="player-overall-rating">${p.rating}</span>
+        UI.dashboardRecentMatches.innerHTML = recent.map(m => `
+          <div class="room-card" style="margin-bottom: 0.75rem; padding: 0.85rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.viewMatchDetails('${m.id}')">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+              <span class="score-pill ${m.result === 'W' ? 'win' : (m.result === 'D' ? 'draw' : 'loss')}" style="font-size: 0.85rem; padding: 0.25rem 0.6rem;">
+                ${m.result}
+              </span>
+              <div>
+                <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">vs ${escapeHtml(m.opponent)}</div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary);">${escapeHtml(m.competition || 'eFootball')} • ${m.match_date || ''}</div>
+              </div>
             </div>
-            <div class="player-card-name">${p.name}</div>
-            <div class="player-card-tier">${p.tier}</div>
+            <div style="font-family: var(--font-title); font-size: 1.2rem; font-weight: 700; color: var(--gold-bright);">
+              ${m.my_score} - ${m.opp_score}
+            </div>
           </div>
         `).join('');
       }
     }
 
-    // Subs Row
-    if (UI.subsRow) {
-      if (squad.subs.length === 0) {
-        UI.subsRow.innerHTML = `
-          <div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
-            No substitute bench players added yet.
+    // 2. Latest Trophy Honors
+    if (UI.dashboardTrophyShowcase) {
+      const topTrophies = AppState.trophies.slice(0, 2);
+      if (topTrophies.length === 0) {
+        UI.dashboardTrophyShowcase.innerHTML = `
+          <div style="padding: 1rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+            <i class="fas fa-trophy" style="font-size: 1.5rem; color: var(--gold-dark); margin-bottom: 0.4rem; display: block;"></i>
+            No trophies logged yet. Record your championship titles!
           </div>
         `;
       } else {
-        UI.subsRow.innerHTML = squad.subs.map((p, idx) => `
-          <div class="sub-chip">
-            <div>
-              <span style="font-family: var(--font-mono); font-weight: 700; color: var(--gold-bright); margin-right: 4px;">${p.pos}</span>
-              <span style="font-size: 0.85rem;">${p.name}</span>
+        UI.dashboardTrophyShowcase.innerHTML = topTrophies.map(t => `
+          <div class="trophy-card ${t.placement === 'champion' ? 'gold' : 'silver'}" style="padding: 0.8rem 1rem; margin-bottom: 0.6rem;">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+              <div style="font-size: 1.8rem;">${t.placement === 'champion' ? '🏆' : '🥈'}</div>
+              <div>
+                <div style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: #fff;">${escapeHtml(t.title)}</div>
+                <div style="font-size: 0.76rem; font-family: var(--font-mono); color: var(--gold-bright);">Final: ${escapeHtml(t.final_score || 'Won')} vs ${escapeHtml(t.final_opponent || 'Opponent')}</div>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <span style="font-family: var(--font-mono); font-weight: 800; color: #fff;">${p.rating}</span>
-              <button class="btn-icon danger" style="width: 20px; height: 20px; font-size: 0.65rem;" onclick="window.removePlayer('subs', ${idx})">
+          </div>
+        `).join('');
+      }
+    }
+
+    // 3. Active Game Plan Summary
+    if (UI.dashboardTacticsSummary) {
+      if (AppState.gamePlans.length === 0) {
+        UI.dashboardTacticsSummary.innerHTML = `
+          <div style="padding: 1rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+            Default setup: 4-2-1-3 Quick Counter. Create custom game plans in Tactical Lab!
+          </div>
+        `;
+      } else {
+        const activePlan = AppState.gamePlans[AppState.activeGamePlanIndex] || AppState.gamePlans[0];
+        UI.dashboardTacticsSummary.innerHTML = `
+          <div style="background: rgba(212, 175, 55, 0.05); border: 1px solid var(--gold-border); border-radius: var(--border-radius-sm); padding: 0.8rem 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <strong style="color: #fff; font-size: 0.95rem;">${escapeHtml(activePlan.name)}</strong>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--gold-bright); font-weight: 700;">${escapeHtml(activePlan.formation)}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+              Playstyle: <span style="color: #fff;">${escapeHtml(activePlan.playstyle)}</span> • Coach: <span style="color: #fff;">${escapeHtml(activePlan.manager || 'Custom')}</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+  };
+
+  // =========================================================================
+  // 2. COMPLETE MATCH HISTORY
+  // =========================================================================
+  const renderMatches = () => {
+    if (!UI.matchesHistoryGrid) return;
+
+    let list = [...AppState.matches];
+
+    // Search filter
+    if (AppState.filters.matchSearch) {
+      const q = AppState.filters.matchSearch.toLowerCase();
+      list = list.filter(m => 
+        (m.opponent && m.opponent.toLowerCase().includes(q)) ||
+        (m.goalscorers && m.goalscorers.toLowerCase().includes(q)) ||
+        (m.notes && m.notes.toLowerCase().includes(q)) ||
+        (m.competition && m.competition.toLowerCase().includes(q))
+      );
+    }
+
+    // Result filter
+    if (AppState.filters.matchResult !== 'all') {
+      list = list.filter(m => m.result === AppState.filters.matchResult);
+    }
+
+    // Competition filter
+    if (AppState.filters.matchCompetition !== 'all') {
+      list = list.filter(m => m.competition === AppState.filters.matchCompetition);
+    }
+
+    // Sort order
+    if (AppState.filters.matchSort === 'oldest') {
+      list.sort((a, b) => new Date(a.match_date || a.created_at) - new Date(b.match_date || b.created_at));
+    } else if (AppState.filters.matchSort === 'opponent') {
+      list.sort((a, b) => (a.opponent || '').localeCompare(b.opponent || ''));
+    } else {
+      // Newest
+      list.sort((a, b) => new Date(b.match_date || b.created_at) - new Date(a.match_date || a.created_at));
+    }
+
+    if (list.length === 0) {
+      UI.matchesHistoryGrid.innerHTML = `
+        <div class="empty-state-box" style="grid-column: 1/-1;">
+          <i class="fas fa-futbol empty-state-icon"></i>
+          <h3 class="empty-state-title">No Matches Found</h3>
+          <p class="empty-state-desc">No match records matched your search or filters. Log a new match to expand your archive.</p>
+          <button class="btn-gold" onclick="document.getElementById('btn-new-match-open').click()">
+            <i class="fas fa-plus-circle"></i> Record New Match
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    UI.matchesHistoryGrid.innerHTML = list.map(m => `
+      <div class="room-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <!-- Top Row: Competition & Result -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+            <span class="competition-badge" style="position: static; font-size: 0.72rem;">${escapeHtml(m.competition || 'eFootball')}</span>
+            <span class="score-pill ${m.result === 'W' ? 'win' : (m.result === 'D' ? 'draw' : 'loss')}">
+              ${m.result === 'W' ? 'VICTORY (W)' : (m.result === 'D' ? 'DRAW (D)' : 'DEFEAT (L)')}
+            </span>
+          </div>
+
+          <!-- Scoreline -->
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem;">
+            <div>
+              <div style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--gold-light); text-transform: uppercase;">Opponent</div>
+              <h3 style="color: #fff; font-size: 1.15rem; margin: 0;">vs ${escapeHtml(m.opponent)}</h3>
+            </div>
+            <div style="font-family: var(--font-title); font-size: 1.5rem; font-weight: 700; color: var(--gold-bright);">
+              ${m.my_score} - ${m.opp_score}
+            </div>
+          </div>
+
+          <!-- Meta badges -->
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <span><i class="far fa-calendar-alt"></i> ${m.match_date || 'Date not recorded'}</span>
+            <span><i class="fas fa-chess-board"></i> ${escapeHtml(m.formation_used || '4-2-1-3')}</span>
+            ${m.manager_used ? `<span><i class="fas fa-user-tie"></i> ${escapeHtml(m.manager_used)}</span>` : ''}
+          </div>
+
+          <!-- Goalscorers snippet -->
+          ${m.goalscorers ? `
+            <div style="font-size: 0.8rem; color: var(--text-gold); margin-bottom: 0.6rem;">
+              <i class="fas fa-futbol"></i> <strong>Goals:</strong> ${escapeHtml(m.goalscorers)}
+            </div>
+          ` : ''}
+
+          <!-- Notes snippet -->
+          ${m.notes ? `
+            <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.8rem;">
+              ${escapeHtml(m.notes)}
+            </p>
+          ` : ''}
+
+          <!-- Video clip indicator -->
+          ${(m.video_url || m.media_storage_id) ? `
+            <div style="margin-bottom: 0.8rem;">
+              <button class="btn-secondary" style="font-size: 0.76rem; padding: 0.3rem 0.6rem; color: #3498db; border-color: rgba(52, 152, 219, 0.4);" onclick="window.playMatchClip('${m.id}')">
+                <i class="fas fa-play"></i> Watch Attached Gameplay Clip
+              </button>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Action Row -->
+        <div style="display: flex; gap: 0.5rem; border-top: 1px solid rgba(212, 175, 55, 0.15); padding-top: 0.8rem; margin-top: 0.6rem;">
+          <button class="btn-secondary" style="flex: 1; font-size: 0.78rem; padding: 0.35rem 0.6rem;" onclick="window.viewMatchDetails('${m.id}')">
+            <i class="fas fa-eye"></i> Details
+          </button>
+          <button class="btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.6rem;" onclick="window.editMatch('${m.id}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.6rem; color: var(--loss-color);" onclick="window.deleteMatch('${m.id}')">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  const openRecordMatchModal = (existingMatch = null) => {
+    if (!UI.modalNewMatch) return;
+    UI.formNewMatch.reset();
+
+    if (UI.uploadProgressWrap) UI.uploadProgressWrap.style.display = 'none';
+
+    if (existingMatch) {
+      AppState.editingMatchId = existingMatch.id;
+      if (UI.modalMatchTitle) UI.modalMatchTitle.textContent = 'Edit Match Record';
+      if (UI.matchEditId) UI.matchEditId.value = existingMatch.id;
+      if (UI.matchOpponent) UI.matchOpponent.value = existingMatch.opponent || '';
+      if (UI.matchCompetition) UI.matchCompetition.value = existingMatch.competition || 'Division 1 Online';
+      if (UI.matchMyScore) UI.matchMyScore.value = existingMatch.my_score !== undefined ? existingMatch.my_score : 3;
+      if (UI.matchOppScore) UI.matchOppScore.value = existingMatch.opp_score !== undefined ? existingMatch.opp_score : 1;
+      if (UI.matchDate) UI.matchDate.value = existingMatch.match_date || new Date().toISOString().slice(0, 10);
+      if (UI.matchTypeSelect) UI.matchTypeSelect.value = existingMatch.match_type || 'Ranked Match';
+      if (UI.matchFormationSelect) UI.matchFormationSelect.value = existingMatch.formation_used || '4-2-1-3';
+      if (UI.matchManagerInput) UI.matchManagerInput.value = existingMatch.manager_used || '';
+      if (UI.matchGoalscorers) UI.matchGoalscorers.value = existingMatch.goalscorers || '';
+      if (UI.matchVideoUrl) UI.matchVideoUrl.value = existingMatch.video_url || '';
+      if (UI.matchNotes) UI.matchNotes.value = existingMatch.notes || '';
+    } else {
+      AppState.editingMatchId = null;
+      if (UI.modalMatchTitle) UI.modalMatchTitle.textContent = 'Record Match Result';
+      if (UI.matchEditId) UI.matchEditId.value = '';
+      if (UI.matchDate) UI.matchDate.value = new Date().toISOString().slice(0, 10);
+      if (UI.matchMyScore) UI.matchMyScore.value = 3;
+      if (UI.matchOppScore) UI.matchOppScore.value = 1;
+      if (UI.matchCompetition) UI.matchCompetition.value = 'Division 1 Online';
+      if (UI.matchManagerInput) UI.matchManagerInput.value = AppState.squad?.manager?.name || 'Pep Guardiola';
+    }
+
+    openModal(UI.modalNewMatch);
+  };
+
+  const setupMatchEventListeners = () => {
+    if (UI.btnNewMatchOpen) {
+      UI.btnNewMatchOpen.addEventListener('click', () => openRecordMatchModal());
+    }
+
+    // Filter controls
+    if (UI.searchMatchesInput) {
+      UI.searchMatchesInput.addEventListener('input', (e) => {
+        AppState.filters.matchSearch = e.target.value.trim();
+        renderMatches();
+      });
+    }
+
+    if (UI.filterMatchResult) {
+      UI.filterMatchResult.addEventListener('change', (e) => {
+        AppState.filters.matchResult = e.target.value;
+        renderMatches();
+      });
+    }
+
+    if (UI.filterMatchCompetition) {
+      UI.filterMatchCompetition.addEventListener('change', (e) => {
+        AppState.filters.matchCompetition = e.target.value;
+        renderMatches();
+      });
+    }
+
+    if (UI.sortMatchesSelect) {
+      UI.sortMatchesSelect.addEventListener('change', (e) => {
+        AppState.filters.matchSort = e.target.value;
+        renderMatches();
+      });
+    }
+
+    // Match Form Submit
+    if (UI.formNewMatch) {
+      UI.formNewMatch.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const opponent = UI.matchOpponent.value.trim();
+        const competition = UI.matchCompetition.value.trim();
+        const myScore = parseInt(UI.matchMyScore.value, 10) || 0;
+        const oppScore = parseInt(UI.matchOppScore.value, 10) || 0;
+        const matchDate = UI.matchDate.value || new Date().toISOString().slice(0, 10);
+        const matchType = UI.matchTypeSelect.value;
+        const formation = UI.matchFormationSelect.value;
+        const manager = UI.matchManagerInput.value.trim();
+        const goalscorers = UI.matchGoalscorers.value.trim();
+        const notes = UI.matchNotes.value.trim();
+        let videoUrl = UI.matchVideoUrl.value.trim();
+        const videoFile = UI.matchVideoFile.files[0];
+
+        try {
+          // Video upload if provided
+          if (videoFile) {
+            if (UI.uploadProgressWrap) UI.uploadProgressWrap.style.display = 'block';
+            if (UI.uploadProgressText) UI.uploadProgressText.textContent = 'Uploading gameplay recording...';
+
+            const uploaded = await SupabaseBridge.recordings.uploadMediaFile(videoFile, (pct) => {
+              if (UI.uploadProgressFill) UI.uploadProgressFill.style.width = `${pct}%`;
+              if (UI.uploadProgressText) UI.uploadProgressText.textContent = `Uploading: ${pct}%`;
+            });
+
+            if (uploaded && uploaded.videoUrl) {
+              videoUrl = uploaded.videoUrl;
+            }
+          }
+
+          const matchPayload = {
+            opponent,
+            competition,
+            my_score: myScore,
+            opp_score: oppScore,
+            match_date: matchDate,
+            match_type: matchType,
+            formation_used: formation,
+            manager_used: manager,
+            goalscorers,
+            notes,
+            video_url: videoUrl
+          };
+
+          if (AppState.editingMatchId) {
+            // Update
+            const updated = await SupabaseBridge.matches.updateMatch(AppState.editingMatchId, matchPayload);
+            const idx = AppState.matches.findIndex(m => m.id === AppState.editingMatchId);
+            if (idx !== -1) AppState.matches[idx] = updated;
+            showToast('Match record updated successfully!', 'success');
+          } else {
+            // Create
+            const created = await SupabaseBridge.matches.createMatch(matchPayload);
+            AppState.matches.unshift(created);
+            showToast('Match recorded and archived!', 'success');
+          }
+
+          closeModal(UI.modalNewMatch);
+          UI.formNewMatch.reset();
+          AppState.editingMatchId = null;
+
+          updateHeroMetrics();
+          renderMatches();
+          renderDashboard();
+        } catch (err) {
+          console.error('Error saving match record:', err);
+          showToast(err.message || 'Error saving match record.', 'error');
+        }
+      });
+    }
+
+    // Global action helpers
+    window.editMatch = (matchId) => {
+      const match = AppState.matches.find(m => m.id === matchId);
+      if (match) openRecordMatchModal(match);
+    };
+
+    window.deleteMatch = async (matchId) => {
+      if (!confirm('Are you sure you want to delete this match record? This will update your personal stats.')) return;
+      try {
+        await SupabaseBridge.matches.deleteMatch(matchId);
+        AppState.matches = AppState.matches.filter(m => m.id !== matchId);
+        updateHeroMetrics();
+        renderMatches();
+        renderDashboard();
+        showToast('Match record deleted.', 'info');
+      } catch (err) {
+        showToast(err.message || 'Error deleting match.', 'error');
+      }
+    };
+
+    window.viewMatchDetails = (matchId) => {
+      const m = AppState.matches.find(item => item.id === matchId);
+      if (!m || !UI.matchDetailsBody) return;
+
+      UI.matchDetailsBody.innerHTML = `
+        <div style="background: rgba(212, 175, 55, 0.06); border: 1px solid var(--gold-border); border-radius: var(--border-radius-sm); padding: 1.2rem; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <span class="competition-badge" style="position: static;">${escapeHtml(m.competition || 'eFootball')}</span>
+            <span class="score-pill ${m.result === 'W' ? 'win' : (m.result === 'D' ? 'draw' : 'loss')}">
+              ${m.result === 'W' ? 'VICTORY' : (m.result === 'D' ? 'DRAW' : 'DEFEAT')}
+            </span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-family: var(--font-title); font-size: 1.3rem; color: #fff; margin: 0;">vs ${escapeHtml(m.opponent)}</h2>
+            <div style="font-family: var(--font-title); font-size: 1.8rem; font-weight: 700; color: var(--gold-bright);">
+              ${m.my_score} - ${m.opp_score}
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; font-size: 0.86rem;">
+          <div><strong style="color: var(--gold-light);">Date:</strong> ${m.match_date || 'N/A'}</div>
+          <div><strong style="color: var(--gold-light);">Match Type:</strong> ${escapeHtml(m.match_type || 'Ranked Match')}</div>
+          <div><strong style="color: var(--gold-light);">Formation:</strong> ${escapeHtml(m.formation_used || '4-2-1-3')}</div>
+          <div><strong style="color: var(--gold-light);">Coach:</strong> ${escapeHtml(m.manager_used || 'Pep Guardiola')}</div>
+        </div>
+
+        ${m.goalscorers ? `
+          <div style="margin-bottom: 1rem; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px;">
+            <div style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--gold-bright); text-transform: uppercase; margin-bottom: 0.2rem;">Goalscorers</div>
+            <div style="font-size: 0.9rem; color: #fff;">${escapeHtml(m.goalscorers)}</div>
+          </div>
+        ` : ''}
+
+        ${m.notes ? `
+          <div style="margin-bottom: 1rem; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px;">
+            <div style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--gold-bright); text-transform: uppercase; margin-bottom: 0.2rem;">Tactical Notes</div>
+            <p style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">${escapeHtml(m.notes)}</p>
+          </div>
+        ` : ''}
+
+        ${m.video_url ? `
+          <div style="margin-top: 1rem;">
+            <button class="btn-gold" style="width: 100%; justify-content: center;" onclick="closeModal(UI.modalMatchDetails); window.playMatchClip('${m.id}')">
+              <i class="fas fa-play"></i> Watch Gameplay Video
+            </button>
+          </div>
+        ` : ''}
+      `;
+
+      openModal(UI.modalMatchDetails);
+    };
+
+    window.playMatchClip = (matchId) => {
+      const match = AppState.matches.find(m => m.id === matchId);
+      if (!match || !match.video_url) {
+        showToast('No video attached to this match record.', 'error');
+        return;
+      }
+      playCinemaVideo(match.video_url, `vs ${match.opponent}`, `Score: ${match.my_score} - ${match.opp_score} • ${match.competition}`);
+    };
+  };
+
+  // =========================================================================
+  // 3. MATCH RECORDINGS & HIGHLIGHTS
+  // =========================================================================
+  const renderRecordings = () => {
+    if (!UI.recordingsGrid) return;
+
+    let list = [...AppState.recordings];
+
+    if (AppState.filters.recordingSearch) {
+      const q = AppState.filters.recordingSearch.toLowerCase();
+      list = list.filter(r => 
+        (r.title && r.title.toLowerCase().includes(q)) ||
+        (r.description && r.description.toLowerCase().includes(q)) ||
+        (Array.isArray(r.tags) && r.tags.some(t => t.toLowerCase().includes(q)))
+      );
+    }
+
+    if (list.length === 0) {
+      UI.recordingsGrid.innerHTML = `
+        <div class="empty-state-box" style="grid-column: 1/-1;">
+          <i class="fas fa-video empty-state-icon"></i>
+          <h3 class="empty-state-title">Gameplay Vault Ready</h3>
+          <p class="empty-state-desc">Upload your eFootball highlights, goals, comeback wins and defensive masterclasses.</p>
+          <button class="btn-gold" onclick="document.getElementById('btn-upload-recording-modal').click()">
+            <i class="fas fa-cloud-upload-alt"></i> Upload First Highlight
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    UI.recordingsGrid.innerHTML = list.map(r => `
+      <div class="recording-card">
+        <div class="video-thumb-container" onclick="window.playHighlightClip('${r.id}')">
+          <img src="${r.thumbnail_url || 'assets/bg.jpg'}" alt="Gameplay Thumbnail" class="video-thumb">
+          <div class="play-overlay-btn"><i class="fas fa-play"></i></div>
+          <span class="duration-badge"><i class="fas fa-film"></i> HD Highlight</span>
+        </div>
+        <div class="recording-info">
+          <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem; margin-bottom: 0.3rem;">
+            <h4 style="color: #fff; font-size: 1rem; margin: 0;">${escapeHtml(r.title)}</h4>
+            <button class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: var(--loss-color);" onclick="window.deleteRecording('${r.id}')" title="Delete Recording">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+          <div style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--gold-light); margin-bottom: 0.4rem;">
+            ${r.date || ''} ${r.file_size_bytes ? `• ${(r.file_size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}
+          </div>
+          ${Array.isArray(r.tags) && r.tags.length > 0 ? `
+            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem;">
+              ${r.tags.map(tag => `<span style="background: rgba(212,175,55,0.15); color: var(--gold-bright); font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 4px;">#${escapeHtml(tag)}</span>`).join('')}
+            </div>
+          ` : ''}
+          ${r.description ? `
+            <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">${escapeHtml(r.description)}</p>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+  };
+
+  const playCinemaVideo = (url, title, meta) => {
+    if (!UI.modalCinemaPlayer || !UI.cinemaVideoPlayer) return;
+    UI.cinemaVideoPlayer.src = url;
+    if (UI.cinemaVideoTitle) UI.cinemaVideoTitle.textContent = title;
+    if (UI.cinemaVideoMeta) UI.cinemaVideoMeta.textContent = meta;
+
+    if (UI.cinemaDownloadBtn) {
+      UI.cinemaDownloadBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title.replace(/\s+/g, '_')}.mp4`;
+        a.target = '_blank';
+        a.click();
+      };
+    }
+
+    openModal(UI.modalCinemaPlayer);
+    UI.cinemaVideoPlayer.play().catch(() => {});
+  };
+
+  const setupRecordingEventListeners = () => {
+    if (UI.btnUploadRecordingModal) {
+      UI.btnUploadRecordingModal.addEventListener('click', () => {
+        UI.formNewRecording.reset();
+        if (UI.recProgressWrap) UI.recProgressWrap.style.display = 'none';
+        openModal(UI.modalNewRecording);
+      });
+    }
+
+    if (UI.searchRecordings) {
+      UI.searchRecordings.addEventListener('input', (e) => {
+        AppState.filters.recordingSearch = e.target.value.trim();
+        renderRecordings();
+      });
+    }
+
+    if (UI.formNewRecording) {
+      UI.formNewRecording.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = UI.recTitleInput.value.trim();
+        const file = UI.recFileInput.files[0];
+        const tagsRaw = UI.recTagsInput.value.trim();
+        const desc = UI.recDescInput.value.trim();
+
+        if (!file) {
+          showToast('Please select a video file to upload.', 'error');
+          return;
+        }
+
+        try {
+          if (UI.recProgressWrap) UI.recProgressWrap.style.display = 'block';
+          if (UI.recProgressText) UI.recProgressText.textContent = 'Uploading gameplay recording...';
+
+          const uploadRes = await SupabaseBridge.recordings.uploadMediaFile(file, (pct) => {
+            if (UI.recProgressFill) UI.recProgressFill.style.width = `${pct}%`;
+            if (UI.recProgressText) UI.recProgressText.textContent = `Uploading: ${pct}%`;
+          });
+
+          const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+
+          const newRec = await SupabaseBridge.recordings.createRecording({
+            title,
+            video_url: uploadRes.videoUrl,
+            storage_path: uploadRes.storagePath,
+            file_size_bytes: uploadRes.size,
+            mime_type: uploadRes.type,
+            tags: tags.length > 0 ? tags : ['Highlight'],
+            description: desc,
+            date: new Date().toISOString().slice(0, 10)
+          });
+
+          AppState.recordings.unshift(newRec);
+          closeModal(UI.modalNewRecording);
+          UI.formNewRecording.reset();
+
+          renderRecordings();
+          updateHeroMetrics();
+          showToast('Gameplay highlight saved to vault!', 'success');
+        } catch (err) {
+          console.error('Upload error:', err);
+          showToast(err.message || 'Error uploading gameplay clip.', 'error');
+        }
+      });
+    }
+
+    window.playHighlightClip = (recId) => {
+      const rec = AppState.recordings.find(r => r.id === recId);
+      if (rec) playCinemaVideo(rec.video_url, rec.title, `${rec.date || ''} • Gameplay Highlight`);
+    };
+
+    window.deleteRecording = async (recId) => {
+      if (!confirm('Are you sure you want to delete this highlight recording?')) return;
+      try {
+        await SupabaseBridge.recordings.deleteRecording(recId);
+        AppState.recordings = AppState.recordings.filter(r => r.id !== recId);
+        renderRecordings();
+        updateHeroMetrics();
+        showToast('Recording removed from vault.', 'info');
+      } catch (err) {
+        showToast(err.message || 'Error deleting recording.', 'error');
+      }
+    };
+  };
+
+  // =========================================================================
+  // 4. TROPHY ROOM & CUP HISTORY
+  // =========================================================================
+  const renderTrophies = () => {
+    if (!UI.trophiesGrid) return;
+
+    let list = [...AppState.trophies];
+    if (AppState.filters.trophyTier !== 'all') {
+      list = list.filter(t => t.placement === AppState.filters.trophyTier);
+    }
+
+    if (list.length === 0) {
+      UI.trophiesGrid.innerHTML = `
+        <div class="empty-state-box" style="grid-column: 1/-1;">
+          <i class="fas fa-trophy empty-state-icon"></i>
+          <h3 class="empty-state-title">Trophy Cabinet Ready</h3>
+          <p class="empty-state-desc">Win championships in Division 1 or log your milestone cups here.</p>
+          <button class="btn-gold" onclick="document.getElementById('btn-new-trophy').click()">
+            <i class="fas fa-trophy"></i> Log Championship Honor
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    UI.trophiesGrid.innerHTML = list.map(t => {
+      const isChamp = t.placement === 'champion';
+      const isRunner = t.placement === 'runner_up';
+      const icon = isChamp ? '🏆' : isRunner ? '🥈' : '🥉';
+      const tierClass = isChamp ? 'gold' : isRunner ? 'silver' : 'bronze';
+      const label = isChamp ? 'CHAMPION (1ST PLACE)' : isRunner ? 'RUNNER-UP (2ND PLACE)' : '3RD PLACE / BRONZE';
+
+      return `
+        <div class="trophy-card ${tierClass}">
+          <div class="trophy-icon-wrap" style="font-size: 2.8rem; text-align: center; margin-bottom: 0.6rem;">${icon}</div>
+          <div style="font-family: var(--font-title); font-size: 1.15rem; color: #fff; font-weight: 700; text-align: center; margin-bottom: 0.2rem;">
+            ${escapeHtml(t.title)}
+          </div>
+          <div style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--gold-bright); text-align: center; text-transform: uppercase;">
+            ${label}
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); text-align: center; margin-top: 0.5rem;">
+            ${t.date_won || ''} ${t.season ? `• ${escapeHtml(t.season)}` : ''}
+          </div>
+          ${t.final_opponent ? `
+            <div style="font-size: 0.82rem; color: var(--gold-light); text-align: center; margin-top: 0.4rem;">
+              Final: ${escapeHtml(t.final_score || 'Won')} vs ${escapeHtml(t.final_opponent)}
+            </div>
+          ` : ''}
+          ${t.notes ? `
+            <p style="font-size: 0.8rem; color: var(--text-secondary); text-align: center; line-height: 1.4; margin-top: 0.6rem;">
+              ${escapeHtml(t.notes)}
+            </p>
+          ` : ''}
+          <div style="text-align: center; margin-top: 0.8rem;">
+            <button class="btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; color: var(--loss-color);" onclick="window.deleteTrophy('${t.id}')">
+              <i class="fas fa-trash-alt"></i> Remove Trophy
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  const setupTrophyEventListeners = () => {
+    if (UI.btnNewTrophy) {
+      UI.btnNewTrophy.addEventListener('click', () => {
+        UI.formNewTrophy.reset();
+        if (UI.trophyDateInput) UI.trophyDateInput.value = new Date().toISOString().slice(0, 10);
+        openModal(UI.modalNewTrophy);
+      });
+    }
+
+    if (UI.filterTrophyTier) {
+      UI.filterTrophyTier.addEventListener('change', (e) => {
+        AppState.filters.trophyTier = e.target.value;
+        renderTrophies();
+      });
+    }
+
+    if (UI.formNewTrophy) {
+      UI.formNewTrophy.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = UI.trophyTitleInput.value.trim();
+        const placement = UI.trophyPlacementInput.value;
+        const dateWon = UI.trophyDateInput.value || new Date().toISOString().slice(0, 10);
+        const opponent = UI.trophyOpponentInput.value.trim();
+        const score = UI.trophyScoreInput.value.trim();
+        const notes = UI.trophyNotesInput.value.trim();
+
+        try {
+          const newTrophy = await SupabaseBridge.trophies.createTrophy({
+            title,
+            placement,
+            date_won: dateWon,
+            final_opponent: opponent,
+            final_score: score,
+            notes
+          });
+
+          AppState.trophies.unshift(newTrophy);
+          closeModal(UI.modalNewTrophy);
+          UI.formNewTrophy.reset();
+
+          renderTrophies();
+          renderDashboard();
+          updateHeroMetrics();
+          showToast('Championship honor added to Trophy Cabinet!', 'success');
+        } catch (err) {
+          showToast(err.message || 'Error saving trophy record.', 'error');
+        }
+      });
+    }
+
+    window.deleteTrophy = async (trophyId) => {
+      if (!confirm('Are you sure you want to remove this trophy from your cabinet?')) return;
+      try {
+        await SupabaseBridge.trophies.deleteTrophy(trophyId);
+        AppState.trophies = AppState.trophies.filter(t => t.id !== trophyId);
+        renderTrophies();
+        renderDashboard();
+        updateHeroMetrics();
+        showToast('Trophy removed.', 'info');
+      } catch (err) {
+        showToast(err.message || 'Error deleting trophy.', 'error');
+      }
+    };
+  };
+
+  // =========================================================================
+  // 5. GAME PLANS & TACTICAL LAB
+  // =========================================================================
+  const getFormationCoordinates = (formation) => {
+    switch (formation) {
+      case '4-2-1-3':
+        return [
+          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, isGK: true },
+          { role: 'LB', name: 'Left Back', x: 18, y: 75 },
+          { role: 'CB', name: 'Centre Back', x: 38, y: 78 },
+          { role: 'CB', name: 'Centre Back', x: 62, y: 78 },
+          { role: 'RB', name: 'Right Back', x: 82, y: 75 },
+          { role: 'DMF', name: 'Def Midfielder', x: 38, y: 62 },
+          { role: 'DMF', name: 'Def Midfielder', x: 62, y: 62 },
+          { role: 'AMF', name: 'Att Midfielder', x: 50, y: 44 },
+          { role: 'LWF', name: 'Left Winger', x: 20, y: 22 },
+          { role: 'CF', name: 'Centre Forward', x: 50, y: 18 },
+          { role: 'RWF', name: 'Right Winger', x: 80, y: 22 }
+        ];
+      case '3-2-4-1':
+        return [
+          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, isGK: true },
+          { role: 'CB', name: 'Centre Back', x: 25, y: 76 },
+          { role: 'CB', name: 'Centre Back', x: 50, y: 78 },
+          { role: 'CB', name: 'Centre Back', x: 75, y: 76 },
+          { role: 'DMF', name: 'Def Midfielder', x: 38, y: 62 },
+          { role: 'DMF', name: 'Def Midfielder', x: 62, y: 62 },
+          { role: 'LMF', name: 'Left Mid', x: 16, y: 44 },
+          { role: 'AMF', name: 'Att Midfielder', x: 38, y: 40 },
+          { role: 'AMF', name: 'Att Midfielder', x: 62, y: 40 },
+          { role: 'RMF', name: 'Right Mid', x: 84, y: 44 },
+          { role: 'CF', name: 'Centre Forward', x: 50, y: 18 }
+        ];
+      case '5-2-3':
+        return [
+          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, isGK: true },
+          { role: 'LWB', name: 'Left Wing Back', x: 14, y: 70 },
+          { role: 'CB', name: 'Centre Back', x: 32, y: 78 },
+          { role: 'CB', name: 'Centre Back', x: 50, y: 80 },
+          { role: 'CB', name: 'Centre Back', x: 68, y: 78 },
+          { role: 'RWB', name: 'Right Wing Back', x: 86, y: 70 },
+          { role: 'DMF', name: 'Def Midfielder', x: 40, y: 55 },
+          { role: 'CMF', name: 'Cent Midfielder', x: 60, y: 55 },
+          { role: 'LWF', name: 'Left Winger', x: 22, y: 24 },
+          { role: 'CF', name: 'Centre Forward', x: 50, y: 18 },
+          { role: 'RWF', name: 'Right Winger', x: 78, y: 24 }
+        ];
+      case '4-4-2':
+        return [
+          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, isGK: true },
+          { role: 'LB', name: 'Left Back', x: 18, y: 75 },
+          { role: 'CB', name: 'Centre Back', x: 38, y: 78 },
+          { role: 'CB', name: 'Centre Back', x: 62, y: 78 },
+          { role: 'RB', name: 'Right Back', x: 82, y: 75 },
+          { role: 'LMF', name: 'Left Mid', x: 18, y: 50 },
+          { role: 'CMF', name: 'Cent Midfielder', x: 40, y: 54 },
+          { role: 'CMF', name: 'Cent Midfielder', x: 60, y: 54 },
+          { role: 'RMF', name: 'Right Mid', x: 82, y: 50 },
+          { role: 'CF', name: 'Striker Left', x: 38, y: 20 },
+          { role: 'CF', name: 'Striker Right', x: 62, y: 20 }
+        ];
+      default: // 4-3-3
+        return [
+          { role: 'GK', name: 'Goalkeeper', x: 50, y: 90, isGK: true },
+          { role: 'LB', name: 'Left Back', x: 18, y: 75 },
+          { role: 'CB', name: 'Centre Back', x: 38, y: 78 },
+          { role: 'CB', name: 'Centre Back', x: 62, y: 78 },
+          { role: 'RB', name: 'Right Back', x: 82, y: 75 },
+          { role: 'DMF', name: 'Def Midfielder', x: 50, y: 62 },
+          { role: 'CMF', name: 'Cent Midfielder', x: 35, y: 48 },
+          { role: 'CMF', name: 'Cent Midfielder', x: 65, y: 48 },
+          { role: 'LWF', name: 'Left Winger', x: 20, y: 24 },
+          { role: 'CF', name: 'Centre Forward', x: 50, y: 18 },
+          { role: 'RWF', name: 'Right Winger', x: 80, y: 24 }
+        ];
+    }
+  };
+
+  const renderTactics = () => {
+    if (!UI.tacticsField || !UI.tacticsControlsPanel) return;
+
+    // Check if any plans exist
+    if (AppState.gamePlans.length === 0) {
+      UI.tacticsField.querySelectorAll('.player-node').forEach(n => n.remove());
+      UI.tacticsControlsPanel.innerHTML = `
+        <div class="glass-panel" style="text-align: center; padding: 2rem;">
+          <i class="fas fa-chess-board" style="font-size: 2.5rem; color: var(--gold-bright); margin-bottom: 0.8rem;"></i>
+          <h3 style="color: #fff; margin-bottom: 0.5rem;">Tactical Lab Ready</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.2rem;">
+            Create custom meta setups with individual player attacking/defensive instructions and draggable pitch formations.
+          </p>
+          <button class="btn-gold" onclick="document.getElementById('btn-create-tactic').click()">
+            <i class="fas fa-plus-circle"></i> Create First Game Plan
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    const plan = AppState.gamePlans[AppState.activeGamePlanIndex] || AppState.gamePlans[0];
+
+    // Render Tactics Controls Panel
+    UI.tacticsControlsPanel.innerHTML = `
+      <div class="glass-panel" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+          <select class="filter-select" id="select-active-plan" style="font-size: 0.95rem; font-weight: 700; color: #fff; background: rgba(0,0,0,0.5);">
+            ${AppState.gamePlans.map((p, idx) => `
+              <option value="${idx}" ${idx === AppState.activeGamePlanIndex ? 'selected' : ''}>
+                ${escapeHtml(p.name)} (${p.formation}) ${p.is_favorite ? '★' : ''}
+              </option>
+            `).join('')}
+          </select>
+
+          <button class="btn-secondary" id="btn-toggle-favorite-plan" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" title="Favorite this plan">
+            <i class="${plan.is_favorite ? 'fas fa-star' : 'far fa-star'}" style="color: var(--gold-bright);"></i>
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 0.8rem; margin-bottom: 0.8rem; font-size: 0.85rem;">
+          <div><strong style="color: var(--gold-light);">Playstyle:</strong> <span style="color: #fff;">${escapeHtml(plan.playstyle)}</span></div>
+          <div><strong style="color: var(--gold-light);">Manager:</strong> <span style="color: #fff;">${escapeHtml(plan.manager || 'Custom')}</span></div>
+        </div>
+
+        <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+          ${escapeHtml(plan.description || 'No custom tactical description provided.')}
+        </p>
+
+        <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 0.8rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--gold-bright); text-transform: uppercase; margin-bottom: 0.3rem;">When to Deploy</div>
+          <div style="font-size: 0.84rem; color: #fff;">${escapeHtml(plan.when_to_use || 'Primary match configuration.')}</div>
+        </div>
+
+        <h4 style="font-family: var(--font-mono); font-size: 0.82rem; text-transform: uppercase; color: var(--gold-light); margin-bottom: 0.6rem;">Individual Player Instructions</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem;">
+          <div style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 6px; padding: 0.6rem;">
+            <div style="color: var(--win-color); font-weight: 700;">Attacking 1:</div>
+            <div>${escapeHtml(plan.offensive_instructions?.atk1 || 'None')}</div>
+          </div>
+          <div style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 6px; padding: 0.6rem;">
+            <div style="color: var(--win-color); font-weight: 700;">Attacking 2:</div>
+            <div>${escapeHtml(plan.offensive_instructions?.atk2 || 'None')}</div>
+          </div>
+          <div style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 6px; padding: 0.6rem;">
+            <div style="color: var(--loss-color); font-weight: 700;">Defensive 1:</div>
+            <div>${escapeHtml(plan.defensive_instructions?.def1 || 'None')}</div>
+          </div>
+          <div style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 6px; padding: 0.6rem;">
+            <div style="color: var(--loss-color); font-weight: 700;">Defensive 2:</div>
+            <div>${escapeHtml(plan.defensive_instructions?.def2 || 'None')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Bind Plan Switcher
+    const selectPlan = document.getElementById('select-active-plan');
+    if (selectPlan) {
+      selectPlan.addEventListener('change', (e) => {
+        AppState.activeGamePlanIndex = parseInt(e.target.value, 10) || 0;
+        renderTactics();
+        renderDashboard();
+      });
+    }
+
+    // Bind Favorite Toggle
+    const btnFav = document.getElementById('btn-toggle-favorite-plan');
+    if (btnFav) {
+      btnFav.addEventListener('click', async () => {
+        try {
+          const newFav = !plan.is_favorite;
+          await SupabaseBridge.gamePlans.updateGamePlan(plan.id, { is_favorite: newFav });
+          plan.is_favorite = newFav;
+          renderTactics();
+          showToast(`Game plan ${newFav ? 'marked as favorite ★' : 'unfavorited'}.`, 'success');
+        } catch (err) {
+          showToast('Error updating favorite.', 'error');
+        }
+      });
+    }
+
+    // Render Draggable Pitch Nodes
+    UI.tacticsField.querySelectorAll('.player-node').forEach(n => n.remove());
+    const nodes = (plan.nodes && plan.nodes.length === 11) ? plan.nodes : getFormationCoordinates(plan.formation);
+
+    nodes.forEach((node, nodeIdx) => {
+      const el = document.createElement('div');
+      el.className = `player-node ${node.isGK ? 'gk' : ''}`;
+      el.style.left = `${node.x}%`;
+      el.style.top = `${node.y}%`;
+      el.dataset.nodeIndex = nodeIdx;
+
+      el.innerHTML = `
+        <div class="player-token">${node.role}</div>
+        <div class="player-name-tag">${escapeHtml(node.name)}</div>
+      `;
+
+      // Enable Drag and Drop on Desktop and Mobile
+      makeDraggable(el, UI.tacticsField, (newX, newY) => {
+        node.x = Math.round(newX);
+        node.y = Math.round(newY);
+        // Persist node updates to game plan
+        plan.nodes = nodes;
+        SupabaseBridge.gamePlans.updateGamePlan(plan.id, { nodes: nodes }).catch(console.warn);
+      });
+
+      // Double click or long press to rename player node
+      el.addEventListener('dblclick', () => {
+        const newName = prompt(`Enter player name for position ${node.role}:`, node.name);
+        if (newName && newName.trim()) {
+          node.name = newName.trim();
+          el.querySelector('.player-name-tag').textContent = node.name;
+          plan.nodes = nodes;
+          SupabaseBridge.gamePlans.updateGamePlan(plan.id, { nodes: nodes }).catch(console.warn);
+        }
+      });
+
+      UI.tacticsField.appendChild(el);
+    });
+  };
+
+  // Drag and Drop Helper for Pitch Chalkboard
+  const makeDraggable = (nodeEl, containerEl, onDragEnd) => {
+    let startX = 0, startY = 0, initialLeft = 0, initialTop = 0, isDragging = false;
+
+    const onPointerDown = (e) => {
+      isDragging = true;
+      startX = e.clientX || (e.touches && e.touches[0].clientX);
+      startY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const rect = containerEl.getBoundingClientRect();
+      const nodeRect = nodeEl.getBoundingClientRect();
+      initialLeft = ((nodeRect.left - rect.left) / rect.width) * 100;
+      initialTop = ((nodeRect.top - rect.top) / rect.height) * 100;
+
+      nodeEl.style.zIndex = '100';
+      nodeEl.style.cursor = 'grabbing';
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('touchmove', onPointerMove, { passive: false });
+      window.addEventListener('touchend', onPointerUp);
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDragging) return;
+      if (e.cancelable) e.preventDefault();
+
+      const curX = e.clientX || (e.touches && e.touches[0].clientX);
+      const curY = e.clientY || (e.touches && e.touches[0].clientY);
+      const rect = containerEl.getBoundingClientRect();
+
+      const dx = ((curX - startX) / rect.width) * 100;
+      const dy = ((curY - startY) / rect.height) * 100;
+
+      let newLeft = Math.max(5, Math.min(95, initialLeft + dx));
+      let newTop = Math.max(5, Math.min(95, initialTop + dy));
+
+      nodeEl.style.left = `${newLeft}%`;
+      nodeEl.style.top = `${newTop}%`;
+    };
+
+    const onPointerUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      nodeEl.style.zIndex = '';
+      nodeEl.style.cursor = 'grab';
+
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+
+      const pctX = parseFloat(nodeEl.style.left);
+      const pctY = parseFloat(nodeEl.style.top);
+      if (onDragEnd) onDragEnd(pctX, pctY);
+    };
+
+    nodeEl.addEventListener('pointerdown', onPointerDown);
+    nodeEl.addEventListener('touchstart', onPointerDown, { passive: true });
+  };
+
+  const setupTacticsEventListeners = () => {
+    if (UI.btnCreateTactic) {
+      UI.btnCreateTactic.addEventListener('click', () => {
+        UI.formCreateTactic.reset();
+        openModal(UI.modalCreateTactic);
+      });
+    }
+
+    if (UI.btnDuplicateTactic) {
+      UI.btnDuplicateTactic.addEventListener('click', async () => {
+        const cur = AppState.gamePlans[AppState.activeGamePlanIndex];
+        if (!cur) return;
+        try {
+          const dup = await SupabaseBridge.gamePlans.duplicateGamePlan(cur.id);
+          AppState.gamePlans.push(dup);
+          AppState.activeGamePlanIndex = AppState.gamePlans.length - 1;
+          renderTactics();
+          showToast(`Game plan duplicated as "${dup.name}"!`, 'success');
+        } catch (err) {
+          showToast('Error duplicating game plan.', 'error');
+        }
+      });
+    }
+
+    if (UI.btnDeleteTactic) {
+      UI.btnDeleteTactic.addEventListener('click', async () => {
+        const cur = AppState.gamePlans[AppState.activeGamePlanIndex];
+        if (!cur) return;
+        if (!confirm(`Are you sure you want to delete game plan "${cur.name}"?`)) return;
+
+        try {
+          await SupabaseBridge.gamePlans.deleteGamePlan(cur.id);
+          AppState.gamePlans = AppState.gamePlans.filter(p => p.id !== cur.id);
+          AppState.activeGamePlanIndex = 0;
+          renderTactics();
+          renderDashboard();
+          showToast('Game plan deleted.', 'info');
+        } catch (err) {
+          showToast('Error deleting game plan.', 'error');
+        }
+      });
+    }
+
+    if (UI.formCreateTactic) {
+      UI.formCreateTactic.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = UI.tacticNameInput.value.trim();
+        const formation = UI.tacticFormationInput.value;
+        const playstyle = UI.tacticPlaystyleInput.value;
+        const manager = UI.tacticManagerInput.value.trim();
+        const desc = UI.tacticDescInput.value.trim();
+        const whenToUse = UI.tacticWhentouseInput.value.trim();
+        const atk1 = UI.tacticAtk1Input.value;
+        const atk2 = UI.tacticAtk2Input.value;
+        const def1 = UI.tacticDef1Input.value;
+        const def2 = UI.tacticDef2Input.value;
+
+        try {
+          const newPlan = await SupabaseBridge.gamePlans.createGamePlan({
+            name,
+            formation,
+            playstyle,
+            manager: manager || 'Pep Guardiola',
+            description: desc,
+            when_to_use: whenToUse,
+            offensive_instructions: { atk1, atk2 },
+            defensive_instructions: { def1, def2 },
+            nodes: getFormationCoordinates(formation),
+            is_favorite: false
+          });
+
+          AppState.gamePlans.unshift(newPlan);
+          AppState.activeGamePlanIndex = 0;
+          closeModal(UI.modalCreateTactic);
+          UI.formCreateTactic.reset();
+
+          renderTactics();
+          renderDashboard();
+          showToast('New game plan saved to Tactical Lab!', 'success');
+        } catch (err) {
+          showToast(err.message || 'Error saving game plan.', 'error');
+        }
+      });
+    }
+  };
+
+  // =========================================================================
+  // 6. STARTING ELEVEN & SQUAD MANAGEMENT
+  // =========================================================================
+  const renderSquads = () => {
+    const squad = AppState.squad || getDefaultSquad();
+
+    // 1. Manager Card
+    if (UI.managerName) UI.managerName.textContent = squad.manager?.name || 'Pep Guardiola';
+    if (UI.managerPlaystyle) UI.managerPlaystyle.textContent = squad.manager?.playstyle || 'Quick Counter';
+    if (UI.managerBoost) UI.managerBoost.textContent = squad.manager?.boost || '+1 Acceleration';
+
+    // 2. Starting XI Grid
+    if (UI.startingXiGrid) {
+      const startingXI = squad.starting_xi || [];
+      if (startingXI.length === 0) {
+        UI.startingXiGrid.innerHTML = `
+          <div style="grid-column: 1/-1; padding: 1.5rem; text-align: center; color: var(--text-secondary);">
+            No players assigned to Starting XI yet. Click "Add Player" to build your squad.
+          </div>
+        `;
+      } else {
+        UI.startingXiGrid.innerHTML = startingXI.map(p => `
+          <div class="player-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+              <span class="pos-badge ${p.pos.toLowerCase()}">${p.pos}</span>
+              <span style="font-family: var(--font-title); font-size: 1.1rem; font-weight: 700; color: var(--gold-bright);">${p.rating}</span>
+            </div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-bottom: 0.2rem;">${escapeHtml(p.name)}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem;">
+              <span style="font-size: 0.72rem; color: var(--text-secondary);">${escapeHtml(p.tier || 'Standard')}</span>
+              <button class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.7rem; color: var(--loss-color);" onclick="window.removeSquadPlayer('${p.id}', 'starting_xi')" title="Remove Player">
                 <i class="fas fa-times"></i>
               </button>
             </div>
@@ -861,1962 +1652,774 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Assigned Roles
-    if (UI.rolesList && squad.roles) {
-      UI.rolesList.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.8rem; margin-top: 1rem;">
-          <div class="instruction-item"><div class="instruction-type">Captain (C)</div><div class="instruction-value">${squad.roles.captain}</div></div>
-          <div class="instruction-item"><div class="instruction-type">Penalty Taker</div><div class="instruction-value">${squad.roles.penalty}</div></div>
-          <div class="instruction-item"><div class="instruction-type">Short Free-Kick</div><div class="instruction-value">${squad.roles.shortFK}</div></div>
-          <div class="instruction-item"><div class="instruction-type">Long Free-Kick</div><div class="instruction-value">${squad.roles.longFK}</div></div>
-        </div>
-      `;
-    }
-  };
-
-  window.removePlayer = (slot, index) => {
-    const squad = AppState.squads[0];
-    if (squad && squad[slot]) {
-      squad[slot].splice(index, 1);
-      StorageEngine.saveData('squads', AppState.squads, AppState.currentUser.id);
-      renderSquads();
-      showToast('Player removed from squad.');
-    }
-  };
-
-  // =========================================================================
-  // SECTION E: STATISTICS & PROGRESS (FRESH ZERO METRICS)
-  // =========================================================================
-  const renderStatistics = () => {
-    const matches = AppState.matches;
-    const total = matches.length;
-    const wins = matches.filter(m => m.result === 'W').length;
-    const draws = matches.filter(m => m.result === 'D').length;
-    const losses = matches.filter(m => m.result === 'L').length;
-    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
-
-    let totalGf = 0;
-    let totalGa = 0;
-    let cleanSheets = 0;
-
-    matches.forEach(m => {
-      totalGf += Number(m.myScore) || 0;
-      totalGa += Number(m.oppScore) || 0;
-      if (Number(m.oppScore) === 0) cleanSheets++;
-    });
-
-    const gd = totalGf - totalGa;
-
-    if (UI.kpiMatches) UI.kpiMatches.textContent = total;
-    if (UI.kpiWins) UI.kpiWins.textContent = wins;
-    if (UI.kpiDraws) UI.kpiDraws.textContent = draws;
-    if (UI.kpiLosses) UI.kpiLosses.textContent = losses;
-    if (UI.kpiWinRate) UI.kpiWinRate.textContent = `${winRate}%`;
-    if (UI.kpiGoalsScored) UI.kpiGoalsScored.textContent = totalGf;
-    if (UI.kpiGoalsConceded) UI.kpiGoalsConceded.textContent = totalGa;
-    if (UI.kpiGoalDiff) UI.kpiGoalDiff.textContent = (gd >= 0 ? `+${gd}` : gd);
-    if (UI.kpiCleanSheets) UI.kpiCleanSheets.textContent = cleanSheets;
-
-    if (UI.formStreakContainer) {
-      if (matches.length === 0) {
-        UI.formStreakContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">No matches yet</span>`;
+    // 3. Substitute Bench
+    if (UI.subsRow) {
+      const subs = squad.subs || [];
+      if (subs.length === 0) {
+        UI.subsRow.innerHTML = `
+          <div style="padding: 1rem; color: var(--text-secondary); font-size: 0.85rem;">
+            No substitutes on bench. Click "Add Player" with Substitute slot selected.
+          </div>
+        `;
       } else {
-        const recent = matches.slice(0, 5);
-        UI.formStreakContainer.innerHTML = recent.map(m => `
-          <span class="form-badge ${m.result}">${m.result}</span>
+        UI.subsRow.innerHTML = subs.map(s => `
+          <div class="player-card" style="min-width: 140px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+              <span class="pos-badge ${s.pos.toLowerCase()}">${s.pos}</span>
+              <span style="font-family: var(--font-title); font-size: 1rem; font-weight: 700; color: var(--gold-bright);">${s.rating}</span>
+            </div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(s.name)}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.3rem;">
+              <span style="font-size: 0.7rem; color: var(--text-secondary);">${escapeHtml(s.tier || 'Standard')}</span>
+              <button class="btn-secondary" style="padding: 0.1rem 0.35rem; font-size: 0.65rem; color: var(--loss-color);" onclick="window.removeSquadPlayer('${s.id}', 'subs')" title="Remove Sub">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
         `).join('');
       }
     }
 
-    drawTrajectoryChart(matches);
-    drawResultsDoughnut(wins, draws, losses);
-    drawGoalsBarChart(matches);
-  };
-
-  const drawTrajectoryChart = (matches) => {
-    const canvas = UI.chartTrajectory;
-    if (!canvas || !canvas.parentElement) return;
-    const width = canvas.parentElement.clientWidth;
-    const height = canvas.parentElement.clientHeight || 260;
-    if (width <= 0 || height <= 0) return;
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, width, height);
-
-    if (matches.length === 0) {
-      ctx.fillStyle = '#626473';
-      ctx.font = '14px Outfit';
-      ctx.textAlign = 'center';
-      ctx.fillText('Record matches to generate your points trajectory curve.', width / 2, height / 2);
-      return;
-    }
-
-    const reversed = [...matches].reverse();
-    let pts = 0;
-    const pointsData = reversed.map(m => {
-      if (m.result === 'W') pts += 3;
-      else if (m.result === 'D') pts += 1;
-      return pts;
-    });
-
-    const maxPts = Math.max(...pointsData, 10);
-    const padding = 40;
-    const stepX = (width - padding * 2) / Math.max(pointsData.length - 1, 1);
-
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.1)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 4; i++) {
-      const y = padding + (i * (height - padding * 2) / 3);
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(width - padding, y);
-      ctx.stroke();
-    }
-
-    const gradient = ctx.createLinearGradient(0, padding, 0, height - padding);
-    gradient.addColorStop(0, 'rgba(255, 215, 0, 0.35)');
-    gradient.addColorStop(1, 'rgba(212, 175, 55, 0.0)');
-
-    ctx.beginPath();
-    pointsData.forEach((val, i) => {
-      const x = padding + i * stepX;
-      const y = height - padding - (val / maxPts) * (height - padding * 2);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.lineTo(padding + (pointsData.length - 1) * stepX, height - padding);
-    ctx.lineTo(padding, height - padding);
-    ctx.closePath();
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.beginPath();
-    pointsData.forEach((val, i) => {
-      const x = padding + i * stepX;
-      const y = height - padding - (val / maxPts) * (height - padding * 2);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    pointsData.forEach((val, i) => {
-      const x = padding + i * stepX;
-      const y = height - padding - (val / maxPts) * (height - padding * 2);
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-      ctx.strokeStyle = '#d4af37';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    });
-  };
-
-  const drawResultsDoughnut = (w, d, l) => {
-    const canvas = UI.chartResultsDoughnut;
-    if (!canvas || !canvas.parentElement) return;
-    const width = canvas.parentElement.clientWidth;
-    const height = canvas.parentElement.clientHeight || 260;
-    if (width <= 0 || height <= 0) return;
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, width, height);
-
-    const total = w + d + l;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.max(10, Math.min(centerX, centerY) - 30);
-    const innerRadius = radius * 0.6;
-
-    if (total === 0) {
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.arc(centerX, centerY, innerRadius, Math.PI * 2, 0, true);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fill();
-      ctx.fillStyle = '#626473';
-      ctx.font = '12px Outfit';
-      ctx.textAlign = 'center';
-      ctx.fillText('0 Matches', centerX, centerY);
-      return;
-    }
-
-    const slices = [
-      { val: w, color: '#ffd700', label: 'Wins' },
-      { val: d, color: '#f1c40f', label: 'Draws' },
-      { val: l, color: '#e74c3c', label: 'Losses' }
-    ];
-
-    let currentAngle = -Math.PI / 2;
-    slices.forEach(slice => {
-      const sliceAngle = (slice.val / total) * (Math.PI * 2);
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
-      ctx.arc(centerX, centerY, innerRadius, currentAngle + sliceAngle, currentAngle, true);
-      ctx.closePath();
-      ctx.fillStyle = slice.color;
-      ctx.fill();
-      currentAngle += sliceAngle;
-    });
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 22px Rajdhani';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${Math.round((w / total) * 100)}%`, centerX, centerY - 6);
-    ctx.fillStyle = '#d4af37';
-    ctx.font = '600 12px Outfit';
-    ctx.fillText('WIN RATE', centerX, centerY + 14);
-  };
-
-  const drawGoalsBarChart = (matches) => {
-    const canvas = UI.chartGoalsBar;
-    if (!canvas || !canvas.parentElement) return;
-    const width = canvas.parentElement.clientWidth;
-    const height = canvas.parentElement.clientHeight || 200;
-    if (width <= 0 || height <= 0) return;
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, width, height);
-
-    if (matches.length === 0) {
-      ctx.fillStyle = '#626473';
-      ctx.font = '14px Outfit';
-      ctx.textAlign = 'center';
-      ctx.fillText('Goals scored and conceded will appear here after matches are played.', width / 2, height / 2);
-      return;
-    }
-
-    const recent = matches.slice(0, 7).reverse();
-    const barWidth = 24;
-    const gap = (width - 60) / recent.length;
-
-    recent.forEach((m, i) => {
-      const x = 30 + i * gap;
-      const scoredH = (m.myScore / 6) * (height - 60);
-      const concededH = (m.oppScore / 6) * (height - 60);
-
-      ctx.fillStyle = '#ffd700';
-      ctx.fillRect(x, height - 30 - scoredH, barWidth / 2 - 2, scoredH);
-
-      ctx.fillStyle = '#e74c3c';
-      ctx.fillRect(x + barWidth / 2, height - 30 - concededH, barWidth / 2 - 2, concededH);
-
-      ctx.fillStyle = '#a0a2b0';
-      ctx.font = '11px Rajdhani';
-      ctx.textAlign = 'center';
-      ctx.fillText(`M${i+1}`, x + barWidth / 2, height - 12);
-    });
-  };
-
-  // =========================================================================
-  // SECTION F: TOURNAMENT CENTRE WITH FRIENDS (CREATOR, KNOCKOUT & RECORDINGS)
-  // =========================================================================
-
-  // Helper: Recalculate standings table from match history log
-  const recalculateTournamentStandings = (tourney) => {
-    if (!tourney) return;
-    tourney.standings = tourney.standings || [];
-    tourney.matchLog = tourney.matchLog || [];
-
-    // Ensure all participants exist in standings
-    const statsMap = {};
-    const participants = (tourney.participants && tourney.participants.length > 0)
-      ? tourney.participants.map(p => p.name)
-      : tourney.standings.map(s => s.team);
-
-    participants.forEach(name => {
-      statsMap[name] = {
-        rank: 1,
-        team: name,
-        played: 0,
-        won: 0,
-        drawn: 0,
-        lost: 0,
-        gf: 0,
-        ga: 0,
-        gd: 0,
-        pts: 0
-      };
-    });
-
-    // Tally up every match in tournament matchLog
-    tourney.matchLog.forEach(m => {
-      if (m.score1 === null || m.score2 === null || m.score1 === undefined || m.score2 === undefined || isNaN(m.score1) || isNaN(m.score2)) return;
-
-      if (!statsMap[m.team1]) {
-        statsMap[m.team1] = { rank: 1, team: m.team1, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
-      }
-      if (!statsMap[m.team2]) {
-        statsMap[m.team2] = { rank: 1, team: m.team2, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
-      }
-
-      const t1 = statsMap[m.team1];
-      const t2 = statsMap[m.team2];
-
-      t1.played += 1;
-      t2.played += 1;
-      t1.gf += m.score1;
-      t1.ga += m.score2;
-      t2.gf += m.score2;
-      t2.ga += m.score1;
-
-      if (m.score1 > m.score2) {
-        t1.won += 1;
-        t1.pts += 3;
-        t2.lost += 1;
-      } else if (m.score2 > m.score1) {
-        t2.won += 1;
-        t2.pts += 3;
-        t1.lost += 1;
-      } else {
-        t1.drawn += 1;
-        t1.pts += 1;
-        t2.drawn += 1;
-        t2.pts += 1;
-      }
-    });
-
-    tourney.standings = Object.values(statsMap).map(s => {
-      s.gd = s.gf - s.ga;
-      return s;
-    });
-
-    tourney.standings.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-    tourney.standings.forEach((s, idx) => { s.rank = idx + 1; });
-  };
-
-  // Helper: Record a tournament match into history & sync with studio recordings
-  const recordTournamentMatch = (tourney, stageName, matchKey, team1, score1, team2, score2, winner, customDate) => {
-    if (!tourney) return;
-    tourney.matchLog = tourney.matchLog || [];
-
-    const existingIdx = tourney.matchLog.findIndex(m => m.matchKey === matchKey);
-    const dateStr = customDate || new Date().toISOString().slice(0, 10);
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const matchRecord = {
-      id: existingIdx >= 0 ? tourney.matchLog[existingIdx].id : 'tm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-      matchKey: matchKey || ('m_' + Date.now()),
-      stageName: stageName || 'Tournament Match',
-      team1: team1,
-      score1: parseInt(score1, 10),
-      team2: team2,
-      score2: parseInt(score2, 10),
-      winner: winner,
-      date: dateStr,
-      timestamp: timeStr
-    };
-
-    if (existingIdx >= 0) {
-      tourney.matchLog[existingIdx] = matchRecord;
-    } else {
-      tourney.matchLog.unshift(matchRecord);
-    }
-
-    // Recalculate standings
-    recalculateTournamentStandings(tourney);
-
-    // Sync with AppState.matches (Match Recordings archive) if the active user participated!
-    const myGamerTag = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-    const isTeam1Me = team1.toLowerCase() === myGamerTag.toLowerCase() || team1.toLowerCase() === 'nonchalant jr';
-    const isTeam2Me = team2.toLowerCase() === myGamerTag.toLowerCase() || team2.toLowerCase() === 'nonchalant jr';
-
-    if (isTeam1Me || isTeam2Me) {
-      const myScore = isTeam1Me ? matchRecord.score1 : matchRecord.score2;
-      const oppScore = isTeam1Me ? matchRecord.score2 : matchRecord.score1;
-      const opponent = isTeam1Me ? team2 : team1;
-      const result = myScore > oppScore ? 'W' : (myScore === oppScore ? 'D' : 'L');
-      const recordingId = `tourney_rec_${tourney.id}_${matchRecord.matchKey}`;
-
-      const recIdx = AppState.matches.findIndex(m => m.id === recordingId);
-      const recItem = {
-        id: recordingId,
-        opponent: opponent,
-        myScore: myScore,
-        oppScore: oppScore,
-        result: result,
-        competition: `Tournament: ${tourney.name}`,
-        teamUsed: 'NONCHALANT JR XI',
-        date: matchRecord.date,
-        tags: ['Tournament', tourney.name, stageName],
-        notes: `Official ${stageName} tournament match against ${opponent}. Final score: ${myScore}-${oppScore}.`,
-        videoUrl: 'assets/bg.jpg',
-        thumbUrl: 'assets/bg.jpg'
-      };
-
-      if (recIdx >= 0) {
-        AppState.matches[recIdx] = recItem;
-      } else {
-        AppState.matches.unshift(recItem);
-      }
-
-      StorageEngine.saveData('matches', AppState.matches, AppState.currentUser.id);
-      renderMatchRecordings();
-      renderHeroStats();
-      renderStatistics();
-    }
-
-    StorageEngine.saveData('tournament', tourney, AppState.currentUser.id);
-  };
-
-  // Helper: Crown Champion and record into tournament champions archive & Trophy Room
-  const crownTournamentChampion = (tourney, championName, runnerUp, scoreline) => {
-    if (!tourney) return;
-    tourney.champion = championName;
-    tourney.championsHistory = tourney.championsHistory || [];
-
-    const champEntry = {
-      id: 'champ_' + Date.now(),
-      tournamentId: tourney.id,
-      tournamentName: tourney.name,
-      champion: championName,
-      runnerUp: runnerUp || 'Finalist',
-      scoreline: scoreline || 'Won Grand Final',
-      date: new Date().toISOString().slice(0, 10),
-      formattedDate: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    };
-
-    const existingChampIdx = tourney.championsHistory.findIndex(c => c.tournamentId === tourney.id);
-    if (existingChampIdx >= 0) {
-      tourney.championsHistory[existingChampIdx] = champEntry;
-    } else {
-      tourney.championsHistory.unshift(champEntry);
-    }
-
-    // Also record in Trophy Room!
-    const trophyId = 'trophy_tourney_' + tourney.id;
-    const existingTrophyIdx = AppState.trophies.findIndex(t => t.id === trophyId);
-    const myGamerTag = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-    const isUserWinner = championName.toLowerCase() === myGamerTag.toLowerCase() || championName.toLowerCase() === 'nonchalant jr';
-
-    const newTrophy = {
-      id: trophyId,
-      title: tourney.name,
-      placement: isUserWinner ? 'champion' : 'runner_up',
-      placementLabel: isUserWinner ? `Champion / 1st Place (Winner: ${championName})` : `Runner-Up / 2nd Place (Winner: ${championName})`,
-      date: champEntry.date,
-      finalOpponent: isUserWinner ? runnerUp : championName,
-      finalScore: scoreline || '3 - 1',
-      trophyType: isUserWinner ? 'gold' : 'silver',
-      iconEmoji: isUserWinner ? '🏆' : '🥈',
-      notes: `Official Tournament: ${tourney.name}. Champion crowned: ${championName}. Runner-Up: ${runnerUp}.`
-    };
-
-    if (existingTrophyIdx >= 0) {
-      AppState.trophies[existingTrophyIdx] = newTrophy;
-    } else {
-      AppState.trophies.unshift(newTrophy);
-    }
-
-    StorageEngine.saveData('trophies', AppState.trophies, AppState.currentUser.id);
-    StorageEngine.saveData('tournament', tourney, AppState.currentUser.id);
-
-    renderTrophyRoom();
-    renderHeroStats();
-    renderTournament();
-  };
-
-  // Helper: Render recorded matches & tournament champions archive panel
-  const renderTournamentMatchesLog = (tourney) => {
-    if (!UI.tournamentMatchesLogContainer) return;
-
-    if (!tourney) {
-      UI.tournamentMatchesLogContainer.innerHTML = `
-        <div class="empty-state-box" style="padding: 2rem;">
-          <i class="fas fa-clipboard-list empty-state-icon"></i>
-          <h4 class="empty-state-title">No Tournament Active</h4>
-          <p class="empty-state-desc">Create a tournament above to begin logging tournament matches and crowning champions.</p>
-        </div>
-      `;
-      return;
-    }
-
-    const matches = tourney.matchLog || [];
-    const champs = tourney.championsHistory || [];
-    const currentChamp = tourney.champion || (champs[0] ? champs[0].champion : null);
-    const myGamerTag = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-
-    let html = '';
-
-    // 1. Champions Showcase Banner
-    if (currentChamp) {
-      const champInfo = champs[0] || {
-        tournamentName: tourney.name,
-        champion: currentChamp,
-        runnerUp: 'Finalist',
-        scoreline: 'Champion',
-        formattedDate: 'Current Cup'
-      };
-
-      html += `
-        <div class="tournament-champions-banner">
-          <div style="display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;">
-            <div style="font-size: 3rem; filter: drop-shadow(0 0 15px gold); line-height: 1;">👑</div>
-            <div>
-              <div style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--gold-bright); text-transform: uppercase; letter-spacing: 1.5px;">
-                <i class="fas fa-trophy"></i> OFFICIAL TOURNAMENT CHAMPION
-              </div>
-              <div style="font-family: var(--font-title); font-size: 1.7rem; font-weight: 800; color: #fff; margin: 0.2rem 0;">
-                ${champInfo.champion}
-              </div>
-              <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                Tournament: <strong style="color: var(--gold-light);">${tourney.name}</strong> • 
-                Final: <span style="font-family: var(--font-mono); color: var(--gold-bright);">${champInfo.scoreline}</span> vs ${champInfo.runnerUp} • 
-                Date: ${champInfo.formattedDate || 'Recently'}
-              </div>
-            </div>
+    // 4. Set-Piece Specialists & Captaincy
+    if (UI.rolesList) {
+      const roles = squad.roles || {};
+      UI.rolesList.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; font-size: 0.86rem;">
+          <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--gold-border);">
+            <div style="color: var(--gold-bright); font-size: 0.78rem; text-transform: uppercase; font-family: var(--font-mono);">Captain (C)</div>
+            <div style="color: #fff; font-weight: 700; margin-top: 0.2rem;">${escapeHtml(roles.captain || 'Not Assigned')}</div>
           </div>
-          <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
-            <span class="badge" style="background: var(--gold-gradient); color: #070709; font-weight: 800; padding: 0.5rem 1rem; font-size: 0.9rem; border-radius: 6px;">
-              <i class="fas fa-medal"></i> 1ST PLACE WINNER
-            </span>
-            <button class="btn-secondary" onclick="document.getElementById('nav-trophies').click()" style="font-size: 0.82rem; padding: 0.5rem 0.9rem;">
-              <i class="fas fa-award"></i> View Trophy Room
-            </button>
+          <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--gold-border);">
+            <div style="color: var(--gold-bright); font-size: 0.78rem; text-transform: uppercase; font-family: var(--font-mono);">Penalty Taker</div>
+            <div style="color: #fff; font-weight: 700; margin-top: 0.2rem;">${escapeHtml(roles.penalty || 'Not Assigned')}</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--gold-border);">
+            <div style="color: var(--gold-bright); font-size: 0.78rem; text-transform: uppercase; font-family: var(--font-mono);">Short Free-Kick</div>
+            <div style="color: #fff; font-weight: 700; margin-top: 0.2rem;">${escapeHtml(roles.shortFK || 'Not Assigned')}</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--gold-border);">
+            <div style="color: var(--gold-bright); font-size: 0.78rem; text-transform: uppercase; font-family: var(--font-mono);">Long Free-Kick</div>
+            <div style="color: #fff; font-weight: 700; margin-top: 0.2rem;">${escapeHtml(roles.longFK || 'Not Assigned')}</div>
           </div>
         </div>
       `;
-
-      // If multiple champions exist in history
-      if (champs.length > 1) {
-        html += `
-          <div style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px; padding: 0.8rem 1.2rem;">
-            <div style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--gold-bright); text-transform: uppercase; margin-bottom: 0.5rem;">
-              <i class="fas fa-history"></i> Hall of Champions / Past Winners
-            </div>
-            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
-              ${champs.map(c => `
-                <div style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem;">
-                  🏆 <strong style="color: #fff;">${c.champion}</strong> (${c.tournamentName} • ${c.formattedDate || c.date})
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }
-    }
-
-    // 2. Matches Header & Action Bar
-    html += `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
-        <div style="font-family: var(--font-title); font-size: 1.15rem; color: #fff;">
-          <i class="fas fa-clipboard-check gold-text"></i> Recorded Tournament Matches 
-          <span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--gold-bright); margin-left: 0.5rem;">(${matches.length} played)</span>
-        </div>
-        <div style="display: flex; gap: 0.6rem;">
-          <button class="btn-gold" onclick="window.openRecordTourneyMatchModal()" style="font-size: 0.82rem; padding: 0.4rem 0.85rem;">
-            <i class="fas fa-plus"></i> Record Match Result
-          </button>
-        </div>
-      </div>
-    `;
-
-    // 3. Matches Grid or Empty State
-    if (matches.length === 0) {
-      html += `
-        <div class="empty-state-box" style="padding: 2.2rem; text-align: center;">
-          <i class="fas fa-futbol empty-state-icon" style="font-size: 2.5rem; margin-bottom: 0.8rem;"></i>
-          <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: #fff; margin-bottom: 0.4rem;">No Tournament Matches Recorded Yet</h4>
-          <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 540px; margin: 0 auto 1.2rem;">
-            Click on any match fixture in the interactive knockout bracket above, or click <strong>"Record Match Result"</strong> to record match scores between friends. All scores update group standings and permanently preserve tournament history!
-          </p>
-          <button class="btn-secondary" onclick="window.openRecordTourneyMatchModal()" style="font-size: 0.85rem;">
-            <i class="fas fa-plus-circle"></i> Record First Match Result
-          </button>
-        </div>
-      `;
-    } else {
-      html += `
-        <div class="tournament-matches-grid">
-          ${matches.map(m => {
-            const isTeam1Me = m.team1.toLowerCase() === myGamerTag.toLowerCase() || m.team1.toLowerCase() === 'nonchalant jr';
-            const isTeam2Me = m.team2.toLowerCase() === myGamerTag.toLowerCase() || m.team2.toLowerCase() === 'nonchalant jr';
-            const isMyMatch = isTeam1Me || isTeam2Me;
-
-            return `
-              <div class="tournament-match-card">
-                <div class="tournament-match-stage">
-                  <span><i class="fas fa-futbol"></i> ${m.stageName}</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">${m.timestamp || m.date}</span>
-                    <button type="button" title="Delete match record" onclick="window.deleteTournamentMatch('${m.id}')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78rem; padding: 2px;">
-                      <i class="fas fa-trash-alt"></i>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="tournament-match-teams">
-                  <div class="tournament-match-team ${m.winner === m.team1 ? 'winner' : ''}" title="${m.team1}">
-                    ${m.winner === m.team1 ? '<i class="fas fa-crown" style="color: var(--gold-bright); margin-right: 4px;"></i>' : ''}
-                    ${m.team1}
-                  </div>
-                  <div class="tournament-match-score">
-                    ${m.score1} - ${m.score2}
-                  </div>
-                  <div class="tournament-match-team ${m.winner === m.team2 ? 'winner' : ''}" style="text-align: right;" title="${m.team2}">
-                    ${m.team2}
-                    ${m.winner === m.team2 ? '<i class="fas fa-crown" style="color: var(--gold-bright); margin-left: 4px;"></i>' : ''}
-                  </div>
-                </div>
-
-                <div class="tournament-match-winner-tag">
-                  <span><i class="fas fa-check-circle"></i> Winner: <strong style="color: var(--gold-bright);">${m.winner}</strong></span>
-                  ${isMyMatch ? `
-                    <span style="margin-left: auto; color: var(--win-color); font-size: 0.75rem;">
-                      <i class="fas fa-save"></i> In Studio Records
-                    </span>
-                  ` : `
-                    <span style="margin-left: auto; color: var(--text-muted); font-size: 0.75rem;">
-                      <i class="fas fa-users"></i> Friends Match
-                    </span>
-                  `}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    }
-
-    UI.tournamentMatchesLogContainer.innerHTML = html;
-  };
-
-  const renderTournament = () => {
-    const tourney = AppState.tournament;
-
-    if (!tourney) {
-      if (UI.bracketContainer) {
-        UI.bracketContainer.innerHTML = `
-          <div class="empty-state-box" style="width: 100%;">
-            <i class="fas fa-sitemap empty-state-icon"></i>
-            <h3 class="empty-state-title">No Tournament Created Yet</h3>
-            <p class="empty-state-desc">
-              Create a custom knockout cup or league table with your friends! Set tournament names, add your friends, generate fixtures, and crown the winner.
-            </p>
-            <div style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
-              <button class="btn-gold" onclick="document.getElementById('modal-create-tournament').classList.add('active')">
-                <i class="fas fa-plus-circle"></i> Create Tournament with Friends
-              </button>
-              <button class="btn-secondary" onclick="window.openTournamentInvite()">
-                <i class="fas fa-share-alt"></i> Invite Friends via Link
-              </button>
-            </div>
-          </div>
-        `;
-      }
-      if (UI.leagueStandingsTbody) {
-        UI.leagueStandingsTbody.innerHTML = `
-          <tr>
-            <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-              Create a tournament above to generate your friends' league standings table.
-            </td>
-          </tr>
-        `;
-      }
-      if (UI.tournamentMatchesLogContainer) {
-        UI.tournamentMatchesLogContainer.innerHTML = `
-          <div class="empty-state-box" style="padding: 2rem;">
-            <i class="fas fa-clipboard-list empty-state-icon"></i>
-            <h4 class="empty-state-title">No Tournament Matches Recorded Yet</h4>
-            <p class="empty-state-desc">Create a tournament above to record fixtures and view crowned champions.</p>
-          </div>
-        `;
-      }
-      return;
-    }
-
-    tourney.matchLog = tourney.matchLog || [];
-    tourney.championsHistory = tourney.championsHistory || [];
-
-    // Standings Table
-    if (UI.leagueStandingsTbody && tourney.standings) {
-      const sorted = [...tourney.standings].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-      UI.leagueStandingsTbody.innerHTML = sorted.map((row, idx) => `
-        <tr>
-          <td style="font-family: var(--font-mono); font-weight: 700; color: ${idx === 0 ? 'var(--gold-bright)' : '#fff'};">#${idx + 1}</td>
-          <td style="font-weight: 700; color: ${row.team === 'NONCHALANT JR' ? 'var(--gold-bright)' : 'inherit'};">
-            ${row.team === 'NONCHALANT JR' ? '👑 ' : ''}${row.team}
-          </td>
-          <td>${row.played}</td>
-          <td>${row.won}</td>
-          <td>${row.drawn}</td>
-          <td>${row.lost}</td>
-          <td>${row.gf}</td>
-          <td>${row.ga}</td>
-          <td style="font-family: var(--font-mono); font-weight: 700; color: ${row.gd >= 0 ? 'var(--win-color)' : 'var(--loss-color)'};">
-            ${row.gd >= 0 ? `+${row.gd}` : row.gd}
-          </td>
-          <td style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 800; color: var(--gold-bright);">${row.pts}</td>
-        </tr>
-      `).join('');
-    }
-
-    // Bracket Tree
-    if (UI.bracketContainer && tourney.bracket) {
-      const rounds = tourney.bracket.rounds || [];
-      const gf = tourney.bracket.grandFinal;
-
-      let roundsHtml = rounds.map((rnd, rIdx) => `
-        <div class="bracket-round">
-          <div class="round-header-label">${rnd.name}</div>
-          ${rnd.matches.map((m, mIdx) => `
-            <div class="bracket-match-node" onclick="window.enterBracketScore(${rIdx}, ${mIdx})" title="Click to enter match score">
-              <div class="bracket-team-row ${m.winner === m.team1 ? 'winner' : ''}">
-                <span>${m.winner === m.team1 ? '👑 ' : ''}${m.team1 || 'TBD'}</span>
-                <span class="bracket-score-val">${(m.score1 !== undefined && m.score1 !== null) ? m.score1 : '-'}</span>
-              </div>
-              <div class="bracket-team-row ${m.winner === m.team2 ? 'winner' : ''}">
-                <span>${m.winner === m.team2 ? '👑 ' : ''}${m.team2 || 'TBD'}</span>
-                <span class="bracket-score-val">${(m.score2 !== undefined && m.score2 !== null) ? m.score2 : '-'}</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `).join('');
-
-      // Append Grand Final box
-      roundsHtml += `
-        <div class="bracket-round">
-          <div class="round-header-label" style="background: var(--gold-gradient); color: #070709;">👑 GRAND FINAL</div>
-          <div class="bracket-match-node" style="border: 2px solid var(--gold-bright); box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);" onclick="window.enterGrandFinalScore()" title="Click to enter Grand Final score and crown Champion">
-            <div class="bracket-team-row ${gf.winner === gf.team1 ? 'winner' : ''}">
-              <span style="font-weight: 800;">${gf.winner === gf.team1 ? '👑 ' : ''}${gf.team1 || 'Finalist 1'}</span>
-              <span class="bracket-score-val">${(gf.score1 !== undefined && gf.score1 !== null) ? gf.score1 : '-'}</span>
-            </div>
-            <div class="bracket-team-row ${gf.winner === gf.team2 ? 'winner' : ''}">
-              <span style="font-weight: 800;">${gf.winner === gf.team2 ? '👑 ' : ''}${gf.team2 || 'Finalist 2'}</span>
-              <span class="bracket-score-val">${(gf.score2 !== undefined && gf.score2 !== null) ? gf.score2 : '-'}</span>
-            </div>
-          </div>
-          <div style="text-align: center; margin-top: 1rem;">
-            <div style="font-size: 2.2rem; filter: drop-shadow(0 0 10px gold);">🏆</div>
-            <div style="font-family: var(--font-title); font-size: 1.1rem; color: var(--gold-bright); font-weight: 800;">
-              ${gf.winner ? `CHAMPION: ${gf.winner}` : 'AWAITING FINAL RESULT'}
-            </div>
-          </div>
-        </div>
-      `;
-
-      UI.bracketContainer.innerHTML = roundsHtml;
-    }
-
-    // Render tournament matches log & champions banner
-    renderTournamentMatchesLog(tourney);
-  };
-
-  // Interactive Match Score Recording in Bracket
-  let activeTourneyMatchContext = null;
-
-  window.enterBracketScore = (roundIdx, matchIdx) => {
-    const tourney = AppState.tournament;
-    if (!tourney || !tourney.bracket) return;
-    const match = tourney.bracket.rounds[roundIdx].matches[matchIdx];
-    const roundName = tourney.bracket.rounds[roundIdx].name;
-
-    activeTourneyMatchContext = {
-      isBracket: true,
-      roundIdx,
-      matchIdx,
-      roundName,
-      matchKey: `R${roundIdx}_M${matchIdx}`,
-      isGrandFinal: false
-    };
-
-    window.openRecordTourneyMatchModal(match.team1, match.team2, roundName, match.score1, match.score2);
-  };
-
-  window.enterGrandFinalScore = () => {
-    const tourney = AppState.tournament;
-    if (!tourney || !tourney.bracket) return;
-    const gf = tourney.bracket.grandFinal;
-    if (!gf.team1 || !gf.team2) {
-      alert('Grand Finalists have not been decided yet. Play the semi-final rounds first!');
-      return;
-    }
-
-    activeTourneyMatchContext = {
-      isBracket: true,
-      roundName: 'Grand Final',
-      matchKey: 'GF',
-      isGrandFinal: true
-    };
-
-    window.openRecordTourneyMatchModal(gf.team1, gf.team2, 'Grand Final', gf.score1, gf.score2);
-  };
-
-  // Delete a match record from tournament history
-  window.deleteTournamentMatch = (matchId) => {
-    const tourney = AppState.tournament;
-    if (!tourney || !tourney.matchLog) return;
-
-    if (!confirm('Are you sure you want to delete this tournament match record?')) return;
-
-    const delIdx = tourney.matchLog.findIndex(m => m.id === matchId);
-    if (delIdx >= 0) {
-      const deletedMatch = tourney.matchLog[delIdx];
-      tourney.matchLog.splice(delIdx, 1);
-
-      // Recalculate standings
-      recalculateTournamentStandings(tourney);
-
-      // Remove synced match from AppState.matches if exists
-      const recId = `tourney_rec_${tourney.id}_${deletedMatch.matchKey}`;
-      AppState.matches = AppState.matches.filter(m => m.id !== recId);
-      StorageEngine.saveData('matches', AppState.matches, AppState.currentUser.id);
-      renderMatchRecordings();
-      renderHeroStats();
-      renderStatistics();
-
-      StorageEngine.saveData('tournament', tourney, AppState.currentUser.id);
-      renderTournament();
-      showToast('Tournament match removed and standings updated.');
     }
   };
 
-  // Open modal to record tournament match
-  window.openRecordTourneyMatchModal = (prefillTeam1 = null, prefillTeam2 = null, prefillStage = null, prefillScore1 = null, prefillScore2 = null) => {
-    // Guard against Click/Pointer event object being passed when triggered by button click
-    if (typeof prefillTeam1 !== 'string') prefillTeam1 = null;
-    if (typeof prefillTeam2 !== 'string') prefillTeam2 = null;
-    if (typeof prefillStage !== 'string') prefillStage = null;
-    if (typeof prefillScore1 !== 'number') prefillScore1 = null;
-    if (typeof prefillScore2 !== 'number') prefillScore2 = null;
-
-    let tourney = AppState.tournament;
-    if (!tourney) {
-      const myTag = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-      const wantsCreate = confirm(`No active tournament found yet.\n\nWould you like to open the Tournament Creator to build brackets with friends?\n\n(Click 'Cancel' to create an instant Quick Challenge Tournament right now!)`);
-      if (wantsCreate) {
-        if (UI.modalCreateTournament) UI.modalCreateTournament.classList.add('active');
-        return;
-      } else {
-        // Automatically initialize an active tournament so the user can record immediately
-        AppState.tournament = {
-          id: 'tourney_' + Date.now(),
-          name: `${myTag} Championship Cup`,
-          format: 'knockout',
-          status: 'In Progress',
-          champion: null,
-          matchLog: [],
-          championsHistory: [],
-          participants: [
-            { id: 'p0', name: myTag, team: myTag },
-            { id: 'p1', name: 'Friend 1', team: 'Friend 1' },
-            { id: 'p2', name: 'Friend 2', team: 'Friend 2' },
-            { id: 'p3', name: 'Friend 3', team: 'Friend 3' }
-          ],
-          bracket: {
-            rounds: [
-              {
-                name: 'Quarter-Finals',
-                matches: [
-                  { team1: myTag, score1: undefined, team2: 'Friend 1', score2: undefined, winner: null },
-                  { team1: 'Friend 2', score1: undefined, team2: 'Friend 3', score2: undefined, winner: null }
-                ]
-              },
-              {
-                name: 'Semi-Finals',
-                matches: [
-                  { team1: 'Winner QF 1', score1: undefined, team2: 'Winner QF 2', score2: undefined, winner: null }
-                ]
-              }
-            ],
-            grandFinal: { team1: null, score1: undefined, team2: null, score2: undefined, winner: null, completed: false }
-          },
-          standings: [
-            { rank: 1, team: myTag, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 },
-            { rank: 2, team: 'Friend 1', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 },
-            { rank: 3, team: 'Friend 2', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 },
-            { rank: 4, team: 'Friend 3', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 }
-          ]
-        };
-        StorageEngine.saveData('tournament', AppState.tournament, AppState.currentUser ? AppState.currentUser.id : 'default');
-        syncTournamentWithServer();
-        renderTournament();
-        tourney = AppState.tournament;
-        showToast('🏆 Tournament initialized! Recording match now.');
-      }
-    }
-
-    if (!prefillTeam1 && !prefillTeam2) {
-      activeTourneyMatchContext = null;
-    }
-
-    let participants = (tourney.participants && tourney.participants.length > 0)
-      ? tourney.participants.map(p => p.name)
-      : (tourney.standings ? tourney.standings.map(s => s.team) : ['NONCHALANT JR', 'Friend 1']);
-
-    if (prefillTeam1 && !participants.includes(prefillTeam1)) {
-      participants = [prefillTeam1, ...participants];
-    }
-    if (prefillTeam2 && !participants.includes(prefillTeam2)) {
-      participants = [...participants, prefillTeam2];
-    }
-
-    // Ensure at least 2 distinct participants exist
-    if (participants.length < 2) {
-      participants.push('Challenger');
-    }
-
-    if (UI.tourneyMatchTeam1Select) {
-      UI.tourneyMatchTeam1Select.innerHTML = participants.map(p => `
-        <option value="${p}" ${p === prefillTeam1 ? 'selected' : ''}>${p}</option>
-      `).join('');
-    }
-
-    if (UI.tourneyMatchTeam2Select) {
-      const defaultTeam2 = prefillTeam2 || (participants.length > 1 ? participants[1] : participants[0]);
-      UI.tourneyMatchTeam2Select.innerHTML = participants.map((p, idx) => `
-        <option value="${p}" ${p === defaultTeam2 ? 'selected' : ''}>${p}</option>
-      `).join('');
-    }
-
-    if (UI.tourneyMatchStageSelect && prefillStage) {
-      UI.tourneyMatchStageSelect.value = prefillStage;
-    }
-
-    if (UI.tourneyMatchScore1Input) {
-      UI.tourneyMatchScore1Input.value = (prefillScore1 !== null && prefillScore1 !== undefined) ? prefillScore1 : 0;
-    }
-    if (UI.tourneyMatchScore2Input) {
-      UI.tourneyMatchScore2Input.value = (prefillScore2 !== null && prefillScore2 !== undefined) ? prefillScore2 : 0;
-    }
-
-    if (UI.tourneyMatchDateInput) {
-      UI.tourneyMatchDateInput.value = new Date().toISOString().slice(0, 10);
-    }
-
-    if (UI.modalRecordTourneyMatch) {
-      UI.modalRecordTourneyMatch.classList.add('active');
-    }
-  };
-
-  // Crown Champion and Save to Trophy Room (Button)
-  if (UI.btnCrownChampion) {
-    UI.btnCrownChampion.addEventListener('click', () => {
-      const tourney = AppState.tournament;
-      if (!tourney) {
-        alert('No active tournament found. Please create one with your friends first!');
-        return;
-      }
-
-      const gf = tourney.bracket ? tourney.bracket.grandFinal : null;
-      const defaultWinner = (gf && gf.winner) ? gf.winner : 'NONCHALANT JR';
-      const promptWinner = prompt(`Crown Champion for "${tourney.name}". Enter winner's gamer tag:`, defaultWinner);
-      if (!promptWinner) return;
-
-      const winnerName = promptWinner.trim();
-      const runnerUp = (gf && gf.team1 === winnerName) ? gf.team2 : (gf ? gf.team1 : 'Finalist Friend');
-      const scoreline = (gf && gf.score1 !== undefined) ? `${gf.score1} - ${gf.score2}` : '3 - 1';
-
-      if (gf) {
-        gf.winner = winnerName;
-        gf.completed = true;
-      }
-
-      crownTournamentChampion(tourney, winnerName, runnerUp, scoreline);
-      showToast(`🏆 "${winnerName}" crowned champion of "${tourney.name}" and saved to Trophy Room!`);
-    });
-  }
-
-  // --- SERVER TOURNAMENT SYNC ENGINE ---
-  const syncTournamentWithServer = async () => {
-    try {
-      if (AppState.tournament) {
-        await fetch('/api/tournament', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(AppState.tournament)
-        });
-      }
-    } catch (e) {}
-  };
-
-  const fetchServerTournament = async () => {
-    try {
-      const res = await fetch('/api/tournament');
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.name && data.participants && Array.isArray(data.participants) && data.participants.length > 0) {
-          if (!AppState.tournament) {
-            AppState.tournament = data;
-            StorageEngine.saveData('tournament', AppState.tournament, AppState.currentUser ? AppState.currentUser.id : 'default');
-            renderTournament();
-          } else {
-            const localNames = (AppState.tournament.participants || []).map(p => p.name).sort().join(',');
-            const serverNames = (data.participants || []).map(p => p.name).sort().join(',');
-            const localMatchesCount = (AppState.tournament.matchLog || []).length;
-            const serverMatchesCount = (data.matchLog || []).length;
-
-            if (localNames !== serverNames || localMatchesCount !== serverMatchesCount) {
-              AppState.tournament = data;
-              StorageEngine.saveData('tournament', AppState.tournament, AppState.currentUser ? AppState.currentUser.id : 'default');
-              renderTournament();
-              showToast(`👥 Tournament updated! Participant roster / scores synced.`);
-            }
-          }
-        }
-      }
-    } catch (e) {}
-  };
-
-  // --- TOURNAMENT FRIENDS PARTICIPANT BUILDER ---
-  const renderFriendPills = () => {
-    if (!UI.friendsListWrap) return;
-    UI.friendsListWrap.innerHTML = AppState.tournamentFriends.map((f, idx) => `
-      <span class="friend-pill">
-        <i class="fas fa-user"></i> ${f}
-        ${idx > 0 ? `<button type="button" class="btn-remove-friend" onclick="window.removeFriendPill(${idx})">&times;</button>` : ''}
-      </span>
-    `).join('');
-  };
-
-  window.removeFriendPill = (idx) => {
-    AppState.tournamentFriends.splice(idx, 1);
-    renderFriendPills();
-  };
-
-  if (UI.btnAddFriendPill && UI.inputFriendName) {
-    UI.btnAddFriendPill.addEventListener('click', () => {
-      const name = UI.inputFriendName.value.trim();
-      if (!name) return;
-      if (!AppState.tournamentFriends.includes(name)) {
-        AppState.tournamentFriends.push(name);
-        renderFriendPills();
-        UI.inputFriendName.value = '';
-      }
-    });
-    UI.inputFriendName.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        UI.btnAddFriendPill.click();
-      }
-    });
-  }
-
-  // --- TOURNAMENT INVITE & SHARING HELPERS ---
-  const openTournamentInviteModal = async () => {
-    const tourney = AppState.tournament;
-    const tourneyName = tourney ? tourney.name : (AppState.tournamentFriends.length > 1 ? 'NONCHALANT JR Weekend Cup' : 'NONCHALANT JR Championship');
-    const host = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-
-    let publicUrl = '';
-    let localWifi = '';
-    try {
-      const res = await fetch('/api/public-url');
-      if (res.ok) {
-        const data = await res.json();
-        publicUrl = (data && data.url) ? data.url.trim() : '';
-        localWifi = (data && data.localWifi) ? data.localWifi.trim() : '';
-      }
-    } catch (e) {}
-
-    const origin = window.location.origin;
-    const pathname = window.location.pathname;
-
-    let baseHost = origin;
-    if (publicUrl && publicUrl.startsWith('https://')) {
-      baseHost = publicUrl.replace(/\/+$/, '');
-    } else if (localWifi && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      baseHost = localWifi.replace(/\/+$/, '');
-    }
-
-    const inviteUrl = `${baseHost}${pathname}?invite=tournament&name=${encodeURIComponent(tourneyName)}&host=${encodeURIComponent(host)}`;
-
-    if (UI.inviteTourneyNameDisplay) UI.inviteTourneyNameDisplay.textContent = tourneyName;
-    if (UI.inviteTourneyHostDisplay) UI.inviteTourneyHostDisplay.textContent = host;
-    if (UI.tournamentInviteUrl) UI.tournamentInviteUrl.value = inviteUrl;
-
-    if (UI.inviteQrImage) {
-      UI.inviteQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(inviteUrl)}`;
-    }
-
-    if (UI.btnShareWhatsapp) {
-      const waText = `⚔️ eFOOTBALL TOURNAMENT CHALLENGE ⚔️\n\n` +
-        `Host: 👑 ${host}\n` +
-        `Tournament: 🏆 ${tourneyName}\n\n` +
-        `👉 Tap this link to enter your Gamer Tag and join the bracket:\n${inviteUrl}\n\n` +
-        `See you on the pitch! ⚽🔥`;
-      UI.btnShareWhatsapp.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
-    }
-
-    if (UI.modalInviteTournament) {
-      UI.modalInviteTournament.classList.add('active');
-    }
-  };
-  window.openTournamentInvite = openTournamentInviteModal;
-
-  const copyInviteLink = async () => {
-    if (!UI.tournamentInviteUrl) return;
-    const link = UI.tournamentInviteUrl.value;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(link);
-      } else {
-        UI.tournamentInviteUrl.select();
-        document.execCommand('copy');
-      }
-      showToast('📋 Tournament invite link copied to clipboard!');
-    } catch (err) {
-      UI.tournamentInviteUrl.select();
-      document.execCommand('copy');
-      showToast('📋 Tournament invite link copied!');
-    }
-  };
-
-  const copyDiscordMessage = async () => {
-    const tourneyName = AppState.tournament ? AppState.tournament.name : 'NONCHALANT JR Championship';
-    const host = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-    const link = UI.tournamentInviteUrl ? UI.tournamentInviteUrl.value : window.location.href;
-
-    const msg = `⚔️ eFOOTBALL TOURNAMENT CHALLENGE ⚔️\n` +
-      `Host: 👑 ${host}\n` +
-      `Tournament: 🏆 ${tourneyName}\n` +
-      `Format: Single Elimination Knockout / Standings\n\n` +
-      `👉 Join the bracket & claim your spot:\n${link}\n\n` +
-      `See you on the pitch! ⚽🔥`;
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(msg);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = msg;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-      }
-      showToast('🎮 Challenge message copied! Paste in Discord or chat.');
-    } catch (e) {
-      showToast('Copied challenge message!');
-    }
-  };
-
-  const triggerNativeShare = async () => {
-    const tourneyName = AppState.tournament ? AppState.tournament.name : 'NONCHALANT JR Championship';
-    const host = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-    const link = UI.tournamentInviteUrl ? UI.tournamentInviteUrl.value : window.location.href;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `eFootball Tournament: ${tourneyName}`,
-          text: `You've been challenged by ${host} to join the tournament!`,
-          url: link
-        });
-      } catch (err) {}
-    } else {
-      copyInviteLink();
-    }
-  };
-
-  const addFriendToActiveTournament = (friendName) => {
-    const tourney = AppState.tournament;
-    if (!tourney) return;
-
-    if (!tourney.participants.some(p => p.name.toLowerCase() === friendName.toLowerCase())) {
-      tourney.participants.push({
-        id: 'p_' + Date.now(),
-        name: friendName,
-        team: friendName
-      });
-    }
-
-    if (!tourney.standings.some(s => s.team.toLowerCase() === friendName.toLowerCase())) {
-      tourney.standings.push({
-        rank: tourney.standings.length + 1,
-        team: friendName,
-        played: 0,
-        won: 0,
-        drawn: 0,
-        lost: 0,
-        gf: 0,
-        ga: 0,
-        gd: 0,
-        pts: 0
-      });
-    }
-
-    if (tourney.bracket && tourney.bracket.rounds && tourney.bracket.rounds[0]) {
-      const qfMatches = tourney.bracket.rounds[0].matches;
-      for (const m of qfMatches) {
-        if (!m.team1 || m.team1.startsWith('Friend ') || m.team1 === 'BYE') {
-          m.team1 = friendName;
-          break;
-        } else if (!m.team2 || m.team2.startsWith('Friend ') || m.team2 === 'BYE') {
-          m.team2 = friendName;
-          break;
-        }
-      }
-    }
-
-    StorageEngine.saveData('tournament', tourney, AppState.currentUser.id);
-  };
-
-  const checkIncomingInvite = async () => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('invite') === 'tournament' || urlParams.has('joinTournament')) {
-        const tourneyName = urlParams.get('name') || (AppState.tournament ? AppState.tournament.name : 'NONCHALANT JR Championship');
-        const host = urlParams.get('host') || 'NONCHALANT JR';
-        const directFriend = urlParams.get('friend') || urlParams.get('tag') || '';
-
-        const navTourney = document.getElementById('nav-tournaments');
-        if (navTourney) navTourney.click();
-
-        // If friend name is pre-set in link, enter them straight automatically!
-        if (directFriend) {
-          try {
-            await fetch(`/api/join?gamerTag=${encodeURIComponent(directFriend)}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ gamerTag: directFriend })
-            });
-          } catch (e) {}
-
-          if (!AppState.tournamentFriends.includes(directFriend)) {
-            AppState.tournamentFriends.push(directFriend);
-          }
-          if (AppState.tournament) {
-            addFriendToActiveTournament(directFriend);
-          }
-          renderTournament();
-          showToast(`🏆 Welcome ${directFriend}! You are entered straight into the tournament bracket!`);
-          return;
-        }
-
-        if (UI.joinTourneyName) UI.joinTourneyName.textContent = tourneyName;
-        if (UI.joinTourneyInviter) {
-          UI.joinTourneyInviter.innerHTML = `You've been challenged by <strong style="color: var(--gold-bright);">${host}</strong> to compete on the pitch!`;
-        }
-        if (UI.modalJoinTournament) {
-          UI.modalJoinTournament.classList.add('active');
-          const inputTag = document.getElementById('join-friend-gamertag');
-          if (inputTag) setTimeout(() => inputTag.focus(), 300);
-        }
-      }
-    } catch (e) {
-      console.warn('Error checking invite URL:', e);
-    }
-  };
-
-  // --- MODALS & FORMS ---
-  const setupModals = () => {
-    if (UI.btnNewRecording) {
-      UI.btnNewRecording.addEventListener('click', () => {
-        if (UI.modalNewMatch) UI.modalNewMatch.classList.add('active');
-      });
-    }
-
-    if (UI.btnNewTrophy) {
-      UI.btnNewTrophy.addEventListener('click', () => {
-        if (UI.modalNewTrophy) UI.modalNewTrophy.classList.add('active');
-      });
-    }
-
-    if (UI.btnCreateTournament) {
-      UI.btnCreateTournament.addEventListener('click', () => {
-        renderFriendPills();
-        if (UI.modalCreateTournament) UI.modalCreateTournament.classList.add('active');
-      });
-    }
-
-    // Tactics Modal Openers
-    if (UI.btnCreateTactic) {
-      UI.btnCreateTactic.addEventListener('click', () => {
-        if (UI.modalCreateTactic) UI.modalCreateTactic.classList.add('active');
-      });
-    }
-
-    if (UI.btnEditTactic) {
-      UI.btnEditTactic.addEventListener('click', () => {
-        if (!AppState.tactics || AppState.tactics.length === 0) return;
-        const cur = AppState.tactics[AppState.activeTacticIndex] || AppState.tactics[0];
-        const nameIn = document.getElementById('edit-tactic-name-input');
-        const styleIn = document.getElementById('edit-tactic-playstyle-input');
-        const descIn = document.getElementById('edit-tactic-desc-input');
-        const whenIn = document.getElementById('edit-tactic-whentouse-input');
-        const atk1In = document.getElementById('edit-tactic-atk1-input');
-        const atk2In = document.getElementById('edit-tactic-atk2-input');
-        const def1In = document.getElementById('edit-tactic-def1-input');
-        const def2In = document.getElementById('edit-tactic-def2-input');
-
-        if (nameIn) nameIn.value = cur.name || '';
-        if (styleIn) styleIn.value = cur.playstyle || 'Quick Counter';
-        if (descIn) descIn.value = cur.description || '';
-        if (whenIn) whenIn.value = cur.whenToUse || '';
-        if (atk1In) atk1In.value = cur.instructions ? (cur.instructions.attacking1 || 'None') : 'None';
-        if (atk2In) atk2In.value = cur.instructions ? (cur.instructions.attacking2 || 'None') : 'None';
-        if (def1In) def1In.value = cur.instructions ? (cur.instructions.defensive1 || 'None') : 'None';
-        if (def2In) def2In.value = cur.instructions ? (cur.instructions.defensive2 || 'None') : 'None';
-
-        if (UI.modalEditTactic) UI.modalEditTactic.classList.add('active');
-      });
-    }
-
-    if (UI.btnDeleteTactic) {
-      UI.btnDeleteTactic.addEventListener('click', () => {
-        if (!AppState.tactics || AppState.tactics.length === 0) return;
-        const cur = AppState.tactics[AppState.activeTacticIndex] || AppState.tactics[0];
-        if (confirm(`Are you sure you want to delete game plan "${cur.name}"?`)) {
-          AppState.tactics.splice(AppState.activeTacticIndex, 1);
-          AppState.activeTacticIndex = 0;
-          StorageEngine.saveData('tactics', AppState.tactics, AppState.currentUser.id);
-          renderTactics();
-          showToast('Game plan removed.');
-        }
-      });
-    }
-
-    // Tournament Invite Button & Handlers
-    if (UI.btnInviteTournament) {
-      UI.btnInviteTournament.addEventListener('click', openTournamentInviteModal);
-    }
-
-    if (UI.btnCopyInviteLink) {
-      UI.btnCopyInviteLink.addEventListener('click', copyInviteLink);
-    }
-
-    if (UI.btnShareDiscord) {
-      UI.btnShareDiscord.addEventListener('click', copyDiscordMessage);
-    }
-
-    if (UI.btnShareNative) {
-      UI.btnShareNative.addEventListener('click', triggerNativeShare);
-    }
-
-    if (UI.btnRecordTourneyMatch) {
-      UI.btnRecordTourneyMatch.addEventListener('click', window.openRecordTourneyMatchModal);
-    }
-
-    if (UI.btnInviteAddFriend && UI.inviteFriendGamertag) {
-      const handleAddFriendToRoster = () => {
-        const name = UI.inviteFriendGamertag.value.trim();
-        if (!name) return;
-        if (!AppState.tournamentFriends.includes(name)) {
-          AppState.tournamentFriends.push(name);
-        }
-        if (AppState.tournament) {
-          addFriendToActiveTournament(name);
-          syncTournamentWithServer();
-        }
-        UI.inviteFriendGamertag.value = '';
-        renderFriendPills();
-        renderTournament();
-        showToast(`👤 "${name}" added to tournament roster!`);
-      };
-
-      UI.btnInviteAddFriend.addEventListener('click', handleAddFriendToRoster);
-      UI.inviteFriendGamertag.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleAddFriendToRoster();
-        }
-      });
-    }
-
+  const setupSquadEventListeners = () => {
     if (UI.btnEditCoach) {
       UI.btnEditCoach.addEventListener('click', () => {
-        const squad = AppState.squads[0];
-        if (squad) {
-          const cName = document.getElementById('coach-name-input');
-          const cStyle = document.getElementById('coach-playstyle-input');
-          const cBoost = document.getElementById('coach-boost-input');
-          const rCap = document.getElementById('role-captain-input');
-          const rPen = document.getElementById('role-penalty-input');
-          const rSfk = document.getElementById('role-shortfk-input');
-          const rLfk = document.getElementById('role-longfk-input');
-
-          if (cName) cName.value = squad.manager.name === 'No Coach Set' ? '' : squad.manager.name;
-          if (cStyle) cStyle.value = squad.manager.playstyle.includes('Quick') ? 'Quick Counter' : 'Possession Game';
-          if (cBoost) cBoost.value = squad.manager.boost === 'No Boost' ? '' : squad.manager.boost;
-          if (rCap) rCap.value = squad.roles.captain === 'Not Assigned' ? '' : squad.roles.captain;
-          if (rPen) rPen.value = squad.roles.penalty === 'Not Assigned' ? '' : squad.roles.penalty;
-          if (rSfk) rSfk.value = squad.roles.shortFK === 'Not Assigned' ? '' : squad.roles.shortFK;
-          if (rLfk) rLfk.value = squad.roles.longFK === 'Not Assigned' ? '' : squad.roles.longFK;
-        }
-        if (UI.modalEditCoach) UI.modalEditCoach.classList.add('active');
+        const sq = AppState.squad || getDefaultSquad();
+        if (UI.coachNameInput) UI.coachNameInput.value = sq.manager?.name || 'Pep Guardiola';
+        if (UI.coachPlaystyleInput) UI.coachPlaystyleInput.value = sq.manager?.playstyle || 'Quick Counter';
+        if (UI.coachBoostInput) UI.coachBoostInput.value = sq.manager?.boost || '+1 Acceleration';
+        if (UI.roleCaptainInput) UI.roleCaptainInput.value = sq.roles?.captain || '';
+        if (UI.rolePenaltyInput) UI.rolePenaltyInput.value = sq.roles?.penalty || '';
+        if (UI.roleShortfkInput) UI.roleShortfkInput.value = sq.roles?.shortFK || '';
+        if (UI.roleLongfkInput) UI.roleLongfkInput.value = sq.roles?.longFK || '';
+        openModal(UI.modalEditCoach);
       });
     }
 
     if (UI.btnAddPlayer) {
       UI.btnAddPlayer.addEventListener('click', () => {
-        if (UI.modalAddPlayer) UI.modalAddPlayer.classList.add('active');
+        UI.formAddPlayer.reset();
+        openModal(UI.modalAddPlayer);
       });
     }
 
-    const avatarBadge = document.getElementById('user-avatar-badge');
-    if (avatarBadge) {
-      avatarBadge.addEventListener('click', () => {
-        const u = AppState.currentUser;
-        if (u) {
-          const tagInput = document.getElementById('account-gamertag-input');
-          const divInput = document.getElementById('account-division-input');
-          if (tagInput) tagInput.value = u.gamerTag || 'NONCHALANT JR';
-          if (divInput) divInput.value = u.division || 'Division 1';
-        }
-        if (UI.modalAccount) UI.modalAccount.classList.add('active');
-      });
-    }
-
-    const btnBackups = document.getElementById('btn-backups-hub');
-    if (btnBackups) {
-      btnBackups.addEventListener('click', () => {
-        if (UI.modalBackups) UI.modalBackups.classList.add('active');
-      });
-    }
-
-    document.querySelectorAll('.btn-close-modal, .btn-modal-cancel').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-        if (UI.cinemaVideoPlayer) UI.cinemaVideoPlayer.pause();
-      });
-    });
-
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          modal.classList.remove('active');
-          if (UI.cinemaVideoPlayer) UI.cinemaVideoPlayer.pause();
-        }
-      });
-    });
-  };
-
-  // Setup Forms
-  const setupForms = () => {
-    if (UI.searchRecordings) UI.searchRecordings.addEventListener('input', renderMatchRecordings);
-    if (UI.filterCompetition) UI.filterCompetition.addEventListener('change', renderMatchRecordings);
-    if (UI.filterResult) UI.filterResult.addEventListener('change', renderMatchRecordings);
-    if (UI.filterTrophyTier) UI.filterTrophyTier.addEventListener('change', renderTrophyRoom);
-
-    // Form: Create Game Plan & Tactics
-    const createTacticForm = document.getElementById('form-create-tactic');
-    if (createTacticForm) {
-      createTacticForm.addEventListener('submit', (e) => {
+    if (UI.formEditCoach) {
+      UI.formEditCoach.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tName = document.getElementById('tactic-name-input').value.trim();
-        const tFormation = document.getElementById('tactic-formation-input').value;
-        const tStyle = document.getElementById('tactic-playstyle-input').value;
-        const tDesc = document.getElementById('tactic-desc-input').value.trim();
-        const tWhen = document.getElementById('tactic-whentouse-input').value.trim();
-        const tAtk1 = document.getElementById('tactic-atk1-input').value;
-        const tAtk2 = document.getElementById('tactic-atk2-input').value;
-        const tDef1 = document.getElementById('tactic-def1-input').value;
-        const tDef2 = document.getElementById('tactic-def2-input').value;
-
-        const newTac = {
-          id: 'tactic_' + Date.now(),
-          name: tName,
-          formation: tFormation,
-          playstyle: tStyle,
-          description: tDesc,
-          whenToUse: tWhen,
-          instructions: {
-            attacking1: tAtk1,
-            attacking2: tAtk2,
-            defensive1: tDef1,
-            defensive2: tDef2
-          },
-          nodes: getFormationNodes(tFormation)
+        const sq = AppState.squad || getDefaultSquad();
+        sq.manager = {
+          name: UI.coachNameInput.value.trim(),
+          playstyle: UI.coachPlaystyleInput.value,
+          boost: UI.coachBoostInput.value.trim()
         };
-
-        AppState.tactics.push(newTac);
-        AppState.activeTacticIndex = AppState.tactics.length - 1;
-        StorageEngine.saveData('tactics', AppState.tactics, AppState.currentUser.id);
-
-        if (UI.modalCreateTactic) UI.modalCreateTactic.classList.remove('active');
-        createTacticForm.reset();
-        renderTactics();
-        showToast(`⚽ Game plan "${tName}" created! Drag players on pitch to customize positions.`);
-      });
-    }
-
-    // Form: Edit Game Plan & Strategy
-    const editTacticForm = document.getElementById('form-edit-tactic');
-    if (editTacticForm) {
-      editTacticForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!AppState.tactics || AppState.tactics.length === 0) return;
-        const cur = AppState.tactics[AppState.activeTacticIndex] || AppState.tactics[0];
-
-        cur.name = document.getElementById('edit-tactic-name-input').value.trim();
-        cur.playstyle = document.getElementById('edit-tactic-playstyle-input').value;
-        cur.description = document.getElementById('edit-tactic-desc-input').value.trim();
-        cur.whenToUse = document.getElementById('edit-tactic-whentouse-input').value.trim();
-        cur.instructions = {
-          attacking1: document.getElementById('edit-tactic-atk1-input').value,
-          attacking2: document.getElementById('edit-tactic-atk2-input').value,
-          defensive1: document.getElementById('edit-tactic-def1-input').value,
-          defensive2: document.getElementById('edit-tactic-def2-input').value
+        sq.roles = {
+          captain: UI.roleCaptainInput.value.trim(),
+          penalty: UI.rolePenaltyInput.value.trim(),
+          shortFK: UI.roleShortfkInput.value.trim(),
+          longFK: UI.roleLongfkInput.value.trim()
         };
-
-        StorageEngine.saveData('tactics', AppState.tactics, AppState.currentUser.id);
-        if (UI.modalEditTactic) UI.modalEditTactic.classList.remove('active');
-        renderTactics();
-        showToast('Tactical strategy updated!');
-      });
-    }
-
-    // Form: Join Tournament via Invite Link
-    const joinTourneyForm = document.getElementById('form-join-tournament');
-    if (joinTourneyForm) {
-      joinTourneyForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fName = document.getElementById('join-friend-gamertag').value.trim();
-        if (!fName) return;
-
-        // Sync with host server
-        try {
-          await fetch(`/api/join?gamerTag=${encodeURIComponent(fName)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gamerTag: fName })
-          });
-        } catch (err) {}
-
-        if (!AppState.tournamentFriends.includes(fName)) {
-          AppState.tournamentFriends.push(fName);
-        }
-
-        if (AppState.tournament) {
-          addFriendToActiveTournament(fName);
-        }
-
-        if (UI.modalJoinTournament) UI.modalJoinTournament.classList.remove('active');
-        renderTournament();
-        showToast(`🎉 Welcome ${fName}! You've joined the tournament bracket!`);
-
-        const hostName = AppState.currentUser ? (AppState.currentUser.gamerTag || 'NONCHALANT JR') : 'NONCHALANT JR';
-        const confirmMsg = `Hey ${hostName}! I have accepted your tournament challenge and registered as "${fName}"! Ready when you are! ⚽🔥`;
-        const waLink = `https://api.whatsapp.com/send?text=${encodeURIComponent(confirmMsg)}`;
-
-        const confirmWa = confirm(`🎉 You are entered as "${fName}" in the tournament!\n\nWould you like to send a quick WhatsApp confirmation to ${hostName}?`);
-        if (confirmWa) {
-          window.open(waLink, '_blank');
-        }
 
         try {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (err) {}
+          await SupabaseBridge.squads.saveSquad(sq);
+          closeModal(UI.modalEditCoach);
+          renderSquads();
+          showToast('Manager & player roles updated!', 'success');
+        } catch (err) {
+          showToast('Error saving manager details.', 'error');
+        }
       });
     }
 
-    // Form: Create Tournament with Friends
-    const tourneyForm = document.getElementById('form-create-tournament');
-    if (tourneyForm) {
-      tourneyForm.addEventListener('submit', (e) => {
+    if (UI.formAddPlayer) {
+      UI.formAddPlayer.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tName = document.getElementById('tournament-name-input').value.trim();
-        const tFormat = document.getElementById('tournament-format-input').value;
+        const slot = UI.playerSlotInput.value; // 'startingXI' or 'subs'
+        const pos = UI.playerPosInput.value;
+        const name = UI.playerNameInput.value.trim();
+        const rating = parseInt(UI.playerRatingInput.value, 10) || 95;
+        const tier = UI.playerTierInput.value;
 
-        // Ensure at least 4 participants for bracket
-        let friends = [...AppState.tournamentFriends];
-        if (friends.length < 2) {
-          friends.push('Friend 1', 'Friend 2', 'Friend 3');
-        }
-
-        // Pad to power of 2 (4 or 8)
-        while (friends.length < 4) {
-          friends.push(`Friend ${friends.length + 1}`);
-        }
-
-        // Generate QF matches
-        const qf = [];
-        for (let i = 0; i < friends.length && i < 8; i += 2) {
-          qf.push({
-            team1: friends[i],
-            score1: undefined,
-            team2: friends[i + 1] || 'BYE',
-            score2: undefined,
-            winner: null
-          });
-        }
-
-        const semiMatches = [
-          { team1: 'Winner QF 1', score1: undefined, team2: 'Winner QF 2', score2: undefined, winner: null }
-        ];
-        if (qf.length > 2) {
-          semiMatches.push({ team1: 'Winner QF 3', score1: undefined, team2: 'Winner QF 4', score2: undefined, winner: null });
-        }
-
-        const newTourney = {
-          id: 'tourney_' + Date.now(),
-          name: tName,
-          format: tFormat,
-          status: 'In Progress',
-          champion: null,
-          matchLog: [],
-          championsHistory: [],
-          participants: friends.map((f, idx) => ({ id: `p${idx}`, name: f, team: f })),
-          bracket: {
-            rounds: [
-              { name: 'Quarter-Finals', matches: qf },
-              { name: 'Semi-Finals', matches: semiMatches }
-            ],
-            grandFinal: {
-              team1: null,
-              score1: undefined,
-              team2: null,
-              score2: undefined,
-              winner: null,
-              completed: false
-            }
-          },
-          standings: friends.map((f, idx) => ({
-            rank: idx + 1,
-            team: f,
-            played: 0,
-            won: 0,
-            drawn: 0,
-            lost: 0,
-            gf: 0,
-            ga: 0,
-            gd: 0,
-            pts: 0
-          }))
-        };
-
-        AppState.tournament = newTourney;
-        StorageEngine.saveData('tournament', newTourney, AppState.currentUser.id);
-        syncTournamentWithServer();
-
-        if (UI.modalCreateTournament) UI.modalCreateTournament.classList.remove('active');
-        tourneyForm.reset();
-
-        renderTournament();
-        showToast(`⚔️ Tournament "${tName}" created with your friends!`);
-      });
-    }
-
-    // Form: Record Tournament Match Result
-    const recordTourneyMatchForm = document.getElementById('form-record-tourney-match');
-    if (recordTourneyMatchForm) {
-      recordTourneyMatchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const tourney = AppState.tournament;
-        if (!tourney) return;
-
-        const stage = UI.tourneyMatchStageSelect ? UI.tourneyMatchStageSelect.value : 'Group Stage';
-        const team1 = UI.tourneyMatchTeam1Select ? UI.tourneyMatchTeam1Select.value : '';
-        const team2 = UI.tourneyMatchTeam2Select ? UI.tourneyMatchTeam2Select.value : '';
-        const s1 = parseInt(UI.tourneyMatchScore1Input ? UI.tourneyMatchScore1Input.value : 0, 10);
-        const s2 = parseInt(UI.tourneyMatchScore2Input ? UI.tourneyMatchScore2Input.value : 0, 10);
-        const mDate = UI.tourneyMatchDateInput ? UI.tourneyMatchDateInput.value : '';
-
-        if (!team1 || !team2) {
-          alert('Please select both teams.');
-          return;
-        }
-
-        if (team1 === team2) {
-          alert('Please select two different participants.');
-          return;
-        }
-
-        const winner = s1 > s2 ? team1 : (s2 > s1 ? team2 : (stage === 'Grand Final' ? team1 : 'Draw'));
-
-        if (activeTourneyMatchContext && activeTourneyMatchContext.isBracket) {
-          if (activeTourneyMatchContext.isGrandFinal) {
-            const gf = tourney.bracket.grandFinal;
-            gf.score1 = s1;
-            gf.score2 = s2;
-            gf.winner = winner;
-            gf.completed = true;
-
-            const runnerUp = winner === team1 ? team2 : team1;
-            recordTournamentMatch(tourney, 'Grand Final', 'GF', team1, s1, team2, s2, winner, mDate);
-            crownTournamentChampion(tourney, winner, runnerUp, `${s1} - ${s2}`);
-            syncTournamentWithServer();
-            showToast(`🏆 ${winner} is crowned Champion! Result permanently recorded.`);
-          } else {
-            const rIdx = activeTourneyMatchContext.roundIdx;
-            const mIdx = activeTourneyMatchContext.matchIdx;
-            const match = tourney.bracket.rounds[rIdx].matches[mIdx];
-            match.score1 = s1;
-            match.score2 = s2;
-            match.winner = winner;
-
-            recordTournamentMatch(tourney, activeTourneyMatchContext.roundName, activeTourneyMatchContext.matchKey, team1, s1, team2, s2, winner, mDate);
-
-            // Advance winner to next round or Grand Final
-            if (tourney.bracket.rounds[rIdx + 1]) {
-              const nextMatchIdx = Math.floor(mIdx / 2);
-              const isTeam1Slot = (mIdx % 2 === 0);
-              const nextMatch = tourney.bracket.rounds[rIdx + 1].matches[nextMatchIdx];
-              if (isTeam1Slot) nextMatch.team1 = match.winner;
-              else nextMatch.team2 = match.winner;
-            } else {
-              const isSlot1 = (mIdx === 0);
-              if (isSlot1) tourney.bracket.grandFinal.team1 = match.winner;
-              else tourney.bracket.grandFinal.team2 = match.winner;
-            }
-
-            StorageEngine.saveData('tournament', tourney, AppState.currentUser.id);
-            syncTournamentWithServer();
-            renderTournament();
-            showToast(`Score recorded! ${winner} advances!`);
-          }
-        } else {
-          const matchKey = `custom_${Date.now()}`;
-          recordTournamentMatch(tourney, stage, matchKey, team1, s1, team2, s2, winner, mDate);
-
-          if (stage === 'Grand Final') {
-            const runnerUp = winner === team1 ? team2 : team1;
-            crownTournamentChampion(tourney, winner, runnerUp, `${s1} - ${s2}`);
-          } else {
-            StorageEngine.saveData('tournament', tourney, AppState.currentUser.id);
-          }
-          syncTournamentWithServer();
-          renderTournament();
-          showToast(`⚽ Match recorded: ${team1} ${s1} - ${s2} ${team2}!`);
-        }
-
-        activeTourneyMatchContext = null;
-        if (UI.modalRecordTourneyMatch) UI.modalRecordTourneyMatch.classList.remove('active');
-        recordTourneyMatchForm.reset();
-      });
-    }
-
-    // Form: Edit Coach & Roles
-    const coachForm = document.getElementById('form-edit-coach');
-    if (coachForm) {
-      coachForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const cName = document.getElementById('coach-name-input').value.trim();
-        const cStyle = document.getElementById('coach-playstyle-input').value;
-        const cBoost = document.getElementById('coach-boost-input').value.trim();
-        const rCap = document.getElementById('role-captain-input').value.trim();
-        const rPen = document.getElementById('role-penalty-input').value.trim();
-        const rSfk = document.getElementById('role-shortfk-input').value.trim();
-        const rLfk = document.getElementById('role-longfk-input').value.trim();
-
-        const squad = AppState.squads[0];
-        squad.manager = {
-          name: cName || 'Pep Guardiola',
-          playstyle: cStyle,
-          boost: cBoost || 'Standard Boost'
-        };
-        squad.roles = {
-          captain: rCap || 'Not Assigned',
-          penalty: rPen || 'Not Assigned',
-          shortFK: rSfk || 'Not Assigned',
-          longFK: rLfk || 'Not Assigned'
-        };
-
-        StorageEngine.saveData('squads', AppState.squads, AppState.currentUser.id);
-        renderSquads();
-        if (UI.modalEditCoach) UI.modalEditCoach.classList.remove('active');
-        showToast('Coach and assigned roles saved!');
-      });
-    }
-
-    // Form: Add Player
-    const playerForm = document.getElementById('form-add-player');
-    if (playerForm) {
-      playerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const slot = document.getElementById('player-slot-input').value;
-        const pos = document.getElementById('player-pos-input').value;
-        const name = document.getElementById('player-name-input').value.trim();
-        const rating = parseInt(document.getElementById('player-rating-input').value, 10);
-        const tier = document.getElementById('player-tier-input').value;
-
-        const newPlayer = { pos, name, rating, tier };
-        const squad = AppState.squads[0];
+        const sq = AppState.squad || getDefaultSquad();
+        const newPlayer = { id: 'p_' + Date.now(), pos, name, rating, tier };
 
         if (slot === 'startingXI') {
-          if (squad.startingXI.length >= 11) {
-            alert('Starting Eleven already has 11 players! Add to Substitutes or remove a player.');
-            return;
+          if (!sq.starting_xi) sq.starting_xi = [];
+          if (sq.starting_xi.length >= 11) {
+            showToast('Starting XI is full (11 players). Added as substitute instead.', 'info');
+            sq.subs.push(newPlayer);
+          } else {
+            sq.starting_xi.push(newPlayer);
           }
-          squad.startingXI.push(newPlayer);
         } else {
-          squad.subs.push(newPlayer);
+          if (!sq.subs) sq.subs = [];
+          sq.subs.push(newPlayer);
         }
 
-        StorageEngine.saveData('squads', AppState.squads, AppState.currentUser.id);
+        try {
+          await SupabaseBridge.squads.saveSquad(sq);
+          closeModal(UI.modalAddPlayer);
+          UI.formAddPlayer.reset();
+          renderSquads();
+          showToast(`${name} added to squad!`, 'success');
+        } catch (err) {
+          showToast('Error adding player.', 'error');
+        }
+      });
+    }
+
+    window.removeSquadPlayer = async (playerId, listKey) => {
+      const sq = AppState.squad || getDefaultSquad();
+      if (listKey === 'starting_xi') {
+        sq.starting_xi = sq.starting_xi.filter(p => p.id !== playerId);
+      } else {
+        sq.subs = sq.subs.filter(p => p.id !== playerId);
+      }
+
+      try {
+        await SupabaseBridge.squads.saveSquad(sq);
         renderSquads();
-        if (UI.modalAddPlayer) UI.modalAddPlayer.classList.remove('active');
-        playerForm.reset();
-        showToast(`⚽ ${name} added to ${slot === 'startingXI' ? 'Starting XI' : 'Substitutes'}!`);
+        showToast('Player removed from squad.', 'info');
+      } catch (err) {
+        showToast('Error removing player.', 'error');
+      }
+    };
+  };
+
+  // =========================================================================
+  // 7. PERSONAL STATISTICS & PERFORMANCE TELEMETRY
+  // =========================================================================
+  const renderStatistics = () => {
+    const statData = SupabaseBridge.stats.compute(AppState.matches);
+
+    // KPIs
+    if (UI.kpiMatches) UI.kpiMatches.textContent = statData.totalMatches;
+    if (UI.kpiWins) UI.kpiWins.textContent = statData.wins;
+    if (UI.kpiDraws) UI.kpiDraws.textContent = statData.draws;
+    if (UI.kpiLosses) UI.kpiLosses.textContent = statData.losses;
+    if (UI.kpiWinRate) UI.kpiWinRate.textContent = `${statData.winRate}%`;
+    if (UI.kpiGoalsScored) UI.kpiGoalsScored.textContent = statData.goalsScored;
+    if (UI.kpiGoalsConceded) UI.kpiGoalsConceded.textContent = statData.goalsConceded;
+    if (UI.kpiGoalDiff) {
+      const gd = statData.goalDiff;
+      UI.kpiGoalDiff.textContent = gd > 0 ? `+${gd}` : gd;
+      UI.kpiGoalDiff.style.color = gd > 0 ? 'var(--win-color)' : (gd < 0 ? 'var(--loss-color)' : 'var(--gold-bright)');
+    }
+    if (UI.kpiCleanSheets) UI.kpiCleanSheets.textContent = statData.cleanSheets;
+
+    // Form Streak Badges (Last 5 matches)
+    if (UI.formStreakContainer) {
+      const recentMatches = AppState.matches.slice(0, 5).reverse();
+      if (recentMatches.length === 0) {
+        UI.formStreakContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem;">No matches</span>';
+      } else {
+        UI.formStreakContainer.innerHTML = recentMatches.map(m => `
+          <span class="score-pill ${m.result === 'W' ? 'win' : (m.result === 'D' ? 'draw' : 'loss')}" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; margin-right: 0.3rem;" title="vs ${m.opponent} (${m.my_score}-${m.opp_score})">
+            ${m.result}
+          </span>
+        `).join('');
+      }
+    }
+
+    // Head-to-Head Table Against Opponents
+    if (UI.opponentsStatsTbody) {
+      const opps = statData.opponents || [];
+      if (opps.length === 0) {
+        UI.opponentsStatsTbody.innerHTML = `
+          <tr><td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">No opponents faced yet.</td></tr>
+        `;
+      } else {
+        UI.opponentsStatsTbody.innerHTML = opps.map(op => {
+          const wr = op.played > 0 ? Math.round((op.won / op.played) * 100) : 0;
+          return `
+            <tr>
+              <td style="font-weight: 700; color: #fff;">vs ${escapeHtml(op.opponent)}</td>
+              <td>${op.played}</td>
+              <td style="color: var(--win-color); font-weight: 700;">${op.won}</td>
+              <td style="color: var(--draw-color);">${op.drawn}</td>
+              <td style="color: var(--loss-color);">${op.lost}</td>
+              <td>${op.gf}</td>
+              <td>${op.ga}</td>
+              <td style="font-weight: 700; color: var(--gold-bright);">${wr}%</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // Canvas Charts
+    drawTrajectoryChart(AppState.matches);
+    drawResultsDoughnutChart(statData.wins, statData.draws, statData.losses);
+    drawGoalsBarChart(AppState.matches);
+  };
+
+  // Canvas 1: Cumulative Points Trajectory Curve
+  const drawTrajectoryChart = (matchesList) => {
+    const canvas = UI.chartTrajectory;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 400;
+    const height = 240;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, width, height);
+
+    if (matchesList.length === 0) {
+      ctx.fillStyle = '#626473';
+      ctx.font = '13px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Record match results to generate points curve.', width / 2, height / 2);
+      return;
+    }
+
+    // Compute cumulative points in chronological order
+    const chronoMatches = [...matchesList].reverse();
+    const dataPoints = [0];
+    let cumulative = 0;
+    chronoMatches.forEach(m => {
+      const pts = m.result === 'W' ? 3 : (m.result === 'D' ? 1 : 0);
+      cumulative += pts;
+      dataPoints.push(cumulative);
+    });
+
+    const maxPts = Math.max(10, Math.ceil(cumulative * 1.2));
+    const padding = { top: 20, right: 30, bottom: 35, left: 40 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+
+    // Draw gridlines
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartH / 4) * i;
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+
+      const val = Math.round(maxPts - (maxPts / 4) * i);
+      ctx.fillStyle = '#a0a2b0';
+      ctx.font = '10px Rajdhani, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${val} pts`, padding.left - 6, y + 3);
+    }
+    ctx.stroke();
+
+    // Map coordinates
+    const stepX = chartW / (dataPoints.length - 1 || 1);
+    const coords = dataPoints.map((pts, i) => {
+      const x = padding.left + i * stepX;
+      const y = padding.top + chartH - (pts / maxPts) * chartH;
+      return { x, y };
+    });
+
+    // Draw glowing gradient area fill
+    const grad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+    grad.addColorStop(0, 'rgba(255, 215, 0, 0.35)');
+    grad.addColorStop(1, 'rgba(212, 175, 55, 0.0)');
+
+    ctx.beginPath();
+    ctx.moveTo(coords[0].x, padding.top + chartH);
+    coords.forEach(pt => ctx.lineTo(pt.x, pt.y));
+    ctx.lineTo(coords[coords.length - 1].x, padding.top + chartH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Draw main gold curve line
+    ctx.beginPath();
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+    ctx.shadowBlur = 10;
+    coords.forEach((pt, idx) => {
+      if (idx === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Draw points & labels
+    coords.forEach((pt, i) => {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd700';
+      ctx.fill();
+      ctx.strokeStyle = '#070709';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (i > 0 && i === coords.length - 1) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px Rajdhani, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${dataPoints[i]} pts`, pt.x, pt.y - 10);
+      }
+    });
+  };
+
+  // Canvas 2: Results Ratio Doughnut Chart
+  const drawResultsDoughnutChart = (wins, draws, losses) => {
+    const canvas = UI.chartResultsDoughnut;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 280;
+    const height = 240;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, width, height);
+
+    const total = wins + draws + losses;
+    if (total === 0) {
+      ctx.fillStyle = '#626473';
+      ctx.font = '13px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No match results recorded yet.', width / 2, height / 2);
+      return;
+    }
+
+    const centerX = width / 2;
+    const centerY = height / 2 - 10;
+    const outerRadius = Math.min(centerX, centerY) - 20;
+    const innerRadius = outerRadius * 0.62;
+
+    const segments = [
+      { count: wins, color: '#2ecc71', label: 'Victories (W)' },
+      { count: draws, color: '#f1c40f', label: 'Draws (D)' },
+      { count: losses, color: '#e74c3c', label: 'Defeats (L)' }
+    ];
+
+    let startAngle = -Math.PI / 2;
+    segments.forEach(seg => {
+      const sliceAngle = (seg.count / total) * Math.PI * 2;
+      if (sliceAngle > 0) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, outerRadius, startAngle, startAngle + sliceAngle);
+        ctx.arc(centerX, centerY, innerRadius, startAngle + sliceAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = seg.color;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      startAngle += sliceAngle;
+    });
+
+    // Center win percentage
+    const winRate = Math.round((wins / total) * 100);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px Cinzel, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${winRate}%`, centerX, centerY + 5);
+
+    ctx.fillStyle = 'var(--gold-bright)';
+    ctx.font = '10px Rajdhani, sans-serif';
+    ctx.fillText('WIN RATIO', centerX, centerY + 20);
+
+    // Legend at bottom
+    const legendY = height - 12;
+    ctx.font = '11px Rajdhani, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillText(`W: ${wins}`, centerX - 60, legendY);
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillText(`D: ${draws}`, centerX, legendY);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillText(`L: ${losses}`, centerX + 60, legendY);
+  };
+
+  // Canvas 3: Goals Scored vs Conceded Bar Chart
+  const drawGoalsBarChart = (matchesList) => {
+    const canvas = UI.chartGoalsBar;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 600;
+    const height = 180;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, width, height);
+
+    const recent = matchesList.slice(0, 10).reverse();
+    if (recent.length === 0) {
+      ctx.fillStyle = '#626473';
+      ctx.font = '13px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Record match scores to display goal metrics.', width / 2, height / 2);
+      return;
+    }
+
+    const padding = { top: 20, right: 20, bottom: 35, left: 40 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+
+    const maxGoals = Math.max(4, ...recent.map(m => Math.max(m.my_score || 0, m.opp_score || 0)));
+    const slotW = chartW / recent.length;
+    const barW = Math.max(6, Math.min(18, slotW * 0.3));
+
+    // Zero baseline
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, padding.top + chartH);
+    ctx.lineTo(width - padding.right, padding.top + chartH);
+    ctx.stroke();
+
+    recent.forEach((m, idx) => {
+      const centerX = padding.left + idx * slotW + slotW / 2;
+
+      const scoredH = (m.my_score / maxGoals) * chartH;
+      const concededH = (m.opp_score / maxGoals) * chartH;
+
+      // Scored Bar (Gold)
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(centerX - barW - 2, padding.top + chartH - scoredH, barW, scoredH);
+
+      // Conceded Bar (Red)
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(centerX + 2, padding.top + chartH - concededH, barW, concededH);
+
+      // Score labels on top of bars
+      ctx.font = '10px Rajdhani, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(m.my_score, centerX - barW / 2 - 2, padding.top + chartH - scoredH - 4);
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillText(m.opp_score, centerX + barW / 2 + 2, padding.top + chartH - concededH - 4);
+
+      // Opponent name snippet below
+      ctx.fillStyle = '#a0a2b0';
+      ctx.font = '9px Outfit, sans-serif';
+      const shortOpp = (m.opponent || '').slice(0, 6);
+      ctx.fillText(shortOpp, centerX, padding.top + chartH + 16);
+    });
+  };
+
+  // =========================================================================
+  // 8. PERSONAL MATCH ARCHIVE
+  // =========================================================================
+  const renderArchive = () => {
+    if (!UI.personalArchiveTimeline) return;
+
+    if (AppState.matches.length === 0) {
+      UI.personalArchiveTimeline.innerHTML = `
+        <div class="empty-state-box">
+          <i class="fas fa-archive empty-state-icon"></i>
+          <h3 class="empty-state-title">Chronological Archive Awaiting Records</h3>
+          <p class="empty-state-desc">Your personal eFootball archive will display your matches, formations, video clips and achievements in a unified timeline.</p>
+        </div>
+      `;
+      return;
+    }
+
+    UI.personalArchiveTimeline.innerHTML = AppState.matches.map((m, idx) => {
+      const isWin = m.result === 'W';
+      return `
+        <div style="position: relative; padding-left: 2.2rem; margin-bottom: 2rem; border-left: 2px solid ${isWin ? 'var(--win-color)' : 'rgba(212,175,55,0.3)'};">
+          <!-- Timeline Marker Node -->
+          <div style="position: absolute; left: -9px; top: 0; width: 16px; height: 16px; border-radius: 50%; background: ${isWin ? 'var(--win-color)' : 'var(--bg-darkest)'}; border: 2px solid var(--gold-bright);"></div>
+
+          <div class="room-card" style="padding: 1.2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--gold-bright);">
+                <i class="far fa-calendar-alt"></i> ${m.match_date || 'Undated'}
+              </span>
+              <span class="score-pill ${m.result === 'W' ? 'win' : (m.result === 'D' ? 'draw' : 'loss')}">
+                ${m.result === 'W' ? 'VICTORY' : (m.result === 'D' ? 'DRAW' : 'DEFEAT')}
+              </span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+              <h3 style="color: #fff; font-size: 1.2rem; margin: 0;">vs ${escapeHtml(m.opponent)}</h3>
+              <div style="font-family: var(--font-title); font-size: 1.6rem; font-weight: 700; color: var(--gold-bright);">
+                ${m.my_score} - ${m.opp_score}
+              </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 0.8rem; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
+              <span><i class="fas fa-trophy gold-text"></i> ${escapeHtml(m.competition || 'eFootball')}</span>
+              <span><i class="fas fa-chess-board gold-text"></i> Formation: ${escapeHtml(m.formation_used || '4-2-1-3')}</span>
+              ${m.manager_used ? `<span><i class="fas fa-user-tie gold-text"></i> Coach: ${escapeHtml(m.manager_used)}</span>` : ''}
+            </div>
+
+            ${m.goalscorers ? `
+              <div style="font-size: 0.85rem; color: var(--gold-light); margin-bottom: 0.6rem;">
+                <i class="fas fa-futbol"></i> <strong>Goalscorers:</strong> ${escapeHtml(m.goalscorers)}
+              </div>
+            ` : ''}
+
+            ${m.notes ? `
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+                ${escapeHtml(m.notes)}
+              </p>
+            ` : ''}
+
+            <div style="display: flex; gap: 0.6rem;">
+              <button class="btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="window.viewMatchDetails('${m.id}')">
+                <i class="fas fa-file-alt"></i> View Full Match File
+              </button>
+              ${m.video_url ? `
+                <button class="btn-gold" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="window.playMatchClip('${m.id}')">
+                  <i class="fas fa-play"></i> Watch Video
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  // =========================================================================
+  // 9. BACKUP & DATA RECOVERY
+  // =========================================================================
+  const setupBackupEventListeners = () => {
+    if (UI.btnExportBackupMain) {
+      UI.btnExportBackupMain.addEventListener('click', () => {
+        const uid = AppState.currentUser ? AppState.currentUser.id : 'default';
+        StorageEngine.exportBackupJSON(uid);
+        showToast('📦 Master studio backup archive downloaded!', 'success');
       });
     }
 
-    // Form: New Match Record
-    const matchForm = document.getElementById('form-new-match');
-    if (matchForm) {
-      matchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const opponent = document.getElementById('match-opponent').value.trim();
-        const myScore = parseInt(document.getElementById('match-my-score').value, 10);
-        const oppScore = parseInt(document.getElementById('match-opp-score').value, 10);
-        const competition = document.getElementById('match-competition').value;
-        const matchDate = document.getElementById('match-date').value || new Date().toISOString().slice(0, 10);
-        const tagsRaw = document.getElementById('match-tags').value;
-        const notes = document.getElementById('match-notes').value.trim();
-        const videoUrlInput = document.getElementById('match-video-url').value.trim();
-        const videoFileInput = document.getElementById('match-video-file').files[0];
-
-        const progressWrap = document.getElementById('upload-progress-wrap');
-        const progressFill = document.getElementById('upload-progress-fill');
-        const progressText = document.getElementById('upload-progress-text');
-
-        let mediaStorageId = null;
-        let finalVideoUrl = videoUrlInput;
-
-        if (videoFileInput) {
-          if (progressWrap) progressWrap.style.display = 'block';
-          for (let p = 15; p <= 100; p += 20) {
-            if (progressFill) progressFill.style.width = `${p}%`;
-            if (progressText) progressText.textContent = `Uploading: ${p}%`;
-            await new Promise(r => setTimeout(r, 100));
-          }
-          const fileId = 'vid_' + Date.now();
-          await StorageEngine.saveMedia(fileId, videoFileInput, { name: videoFileInput.name });
-          mediaStorageId = fileId;
-        }
-
-        const result = myScore > oppScore ? 'W' : (myScore === oppScore ? 'D' : 'L');
-        const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-
-        const newMatch = {
-          id: 'match_' + Date.now(),
-          opponent,
-          myScore,
-          oppScore,
-          result,
-          competition,
-          teamUsed: 'NONCHALANT JR XI',
-          date: matchDate,
-          tags: tags.length ? tags : ['Match Day'],
-          notes,
-          videoUrl: finalVideoUrl || 'assets/bg.jpg',
-          mediaStorageId,
-          thumbUrl: 'assets/bg.jpg'
-        };
-
-        AppState.matches.unshift(newMatch);
-        StorageEngine.saveData('matches', AppState.matches, AppState.currentUser.id);
-
-        if (UI.modalNewMatch) UI.modalNewMatch.classList.remove('active');
-        matchForm.reset();
-        if (progressWrap) progressWrap.style.display = 'none';
-
-        renderMatchRecordings();
-        renderHeroStats();
-        renderStatistics();
-        showToast('🎬 New match recording saved!');
-      });
-    }
-
-    // Form: New Trophy
-    const trophyForm = document.getElementById('form-new-trophy');
-    if (trophyForm) {
-      trophyForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const title = document.getElementById('trophy-title-input').value.trim();
-        const placement = document.getElementById('trophy-placement-input').value;
-        const date = document.getElementById('trophy-date-input').value || new Date().toISOString().slice(0, 10);
-        const finalOpponent = document.getElementById('trophy-opponent-input').value.trim();
-        const finalScore = document.getElementById('trophy-score-input').value.trim();
-        const notes = document.getElementById('trophy-notes-input').value.trim();
-
-        const newTrophy = {
-          id: 'trophy_' + Date.now(),
-          title,
-          placement,
-          placementLabel: placement === 'champion' ? 'Champion / 1st Place' : (placement === 'runner_up' ? 'Runner-up / 2nd Place' : 'Achievement'),
-          date,
-          finalOpponent: finalOpponent || 'Grand Finalist',
-          finalScore: finalScore || '1 - 0',
-          trophyType: placement === 'champion' ? 'gold' : 'silver',
-          iconEmoji: placement === 'champion' ? '🏆' : '🥈',
-          notes
-        };
-
-        AppState.trophies.unshift(newTrophy);
-        StorageEngine.saveData('trophies', AppState.trophies, AppState.currentUser.id);
-
-        if (UI.modalNewTrophy) UI.modalNewTrophy.classList.remove('active');
-        trophyForm.reset();
-
-        renderTrophyRoom();
-        renderHeroStats();
-        showToast('🏆 Tournament honor added to Trophy Room!');
-      });
-    }
-
-    // Backups
-    const btnExport = document.getElementById('btn-export-backup');
-    if (btnExport) {
-      btnExport.addEventListener('click', () => {
-        StorageEngine.exportBackupJSON(AppState.currentUser.id);
-        showToast('Backup downloaded successfully!');
-      });
-    }
-
-    const fileImport = document.getElementById('file-import-backup');
-    if (fileImport) {
-      fileImport.addEventListener('change', async (e) => {
+    if (UI.fileImportBackupMain) {
+      UI.fileImportBackupMain.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        try {
-          await StorageEngine.importBackupJSON(file, AppState.currentUser.id);
-          loadUserData();
-          renderAllSections();
-          if (UI.modalBackups) UI.modalBackups.classList.remove('active');
-          showToast('Backup restored successfully!');
-        } catch (err) {
-          alert('Failed to import backup: ' + err.message);
+
+        if (!confirm('Importing this backup will merge and update your studio records. Do you wish to continue?')) {
+          e.target.value = '';
+          return;
         }
-      });
-    }
 
-    // Form: Account Profile Identity
-    const accountForm = document.getElementById('form-account-profile');
-    if (accountForm) {
-      accountForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const gamerTag = (document.getElementById('account-gamertag-input') ? document.getElementById('account-gamertag-input').value : '').trim();
-        const division = (document.getElementById('account-division-input') ? document.getElementById('account-division-input').value : '').trim();
-        const efootballId = (document.getElementById('account-efootball-id') ? document.getElementById('account-efootball-id').value : '').trim();
-        const platform = (document.getElementById('account-platform-input') ? document.getElementById('account-platform-input').value : '').trim();
-
-        const updated = AuthEngine.updateProfile({ gamerTag, division, efootballId, platform });
-        AppState.currentUser = updated;
-        renderUserProfile();
-        if (UI.modalAccount) UI.modalAccount.classList.remove('active');
-        showToast('Gamer profile updated successfully!');
-      });
-    }
-
-    // Form: Account Security Recovery
-    const recoveryForm = document.getElementById('form-recovery');
-    if (recoveryForm) {
-      recoveryForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const uName = (document.getElementById('recovery-username') ? document.getElementById('recovery-username').value : '').trim();
-        const pin = (document.getElementById('recovery-pin') ? document.getElementById('recovery-pin').value : '').trim();
-        const newPass = (document.getElementById('recovery-new-pass') ? document.getElementById('recovery-new-pass').value : '');
         try {
-          AuthEngine.recoverAccount(uName, pin, newPass);
-          if (UI.modalRecovery) UI.modalRecovery.classList.remove('active');
-          recoveryForm.reset();
-          showToast('Password reset successfully! Access restored.');
+          const uid = AppState.currentUser ? AppState.currentUser.id : 'default';
+          await StorageEngine.importBackupJSON(file, uid);
+          await loadAllStudioData();
+          renderDashboard();
+          showToast('Master backup restored successfully!', 'success');
         } catch (err) {
-          alert(err.message);
+          showToast(err.message || 'Failed to import backup.', 'error');
+        } finally {
+          e.target.value = '';
         }
       });
     }
   };
 
-  initApp();
+  // =========================================================================
+  // 10. SETTINGS & CLOUD CONFIGURATION
+  // =========================================================================
+  const openSupabaseConfigModal = () => {
+    if (!UI.modalSupabaseConfig) return;
+    const creds = SupabaseBridge.getCredentials();
+    if (UI.supabaseUrlInput) UI.supabaseUrlInput.value = creds.url && !creds.url.includes('placeholder') ? creds.url : '';
+    if (UI.supabaseKeyInput) UI.supabaseKeyInput.value = creds.anonKey && !creds.anonKey.includes('placeholder') ? creds.anonKey : '';
+    if (UI.supabaseTestFeedback) UI.supabaseTestFeedback.style.display = 'none';
+    openModal(UI.modalSupabaseConfig);
+  };
+
+  const setupSettingsEventListeners = () => {
+    // Gamer Profile Save
+    if (UI.formSettingsProfile) {
+      UI.formSettingsProfile.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const gamerTag = UI.settingsGamertagInput.value.trim();
+        const division = UI.settingsDivisionInput.value.trim();
+        const efootballId = UI.settingsEfootballId.value.trim();
+        const platform = UI.settingsPlatformInput.value.trim();
+
+        try {
+          const updated = await AuthEngine.updateProfile({
+            gamerTag,
+            division,
+            efootballId,
+            platform
+          });
+
+          AppState.currentUser = updated;
+          updateUserUI(updated);
+          showToast('Profile identity settings saved!', 'success');
+        } catch (err) {
+          showToast(err.message || 'Error saving profile settings.', 'error');
+        }
+      });
+    }
+
+    // Supabase Cloud Configuration Save
+    if (UI.formSupabaseConfig) {
+      UI.formSupabaseConfig.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = UI.supabaseUrlInput.value.trim();
+        const key = UI.supabaseKeyInput.value.trim();
+
+        if (UI.supabaseTestFeedback) {
+          UI.supabaseTestFeedback.style.display = 'block';
+          UI.supabaseTestFeedback.style.background = 'rgba(212,175,55,0.15)';
+          UI.supabaseTestFeedback.style.color = 'var(--gold-bright)';
+          UI.supabaseTestFeedback.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing Supabase Cloud connection...';
+        }
+
+        try {
+          SupabaseBridge.configure(url, key);
+          const isReady = SupabaseBridge.isReady();
+
+          if (isReady) {
+            if (UI.supabaseTestFeedback) {
+              UI.supabaseTestFeedback.style.background = 'rgba(46,204,113,0.15)';
+              UI.supabaseTestFeedback.style.color = 'var(--win-color)';
+              UI.supabaseTestFeedback.innerHTML = '<i class="fas fa-check-circle"></i> Supabase Cloud connection verified & ready!';
+            }
+            updateSupabaseStatusUI();
+            await loadAllStudioData();
+            setTimeout(() => closeModal(UI.modalSupabaseConfig), 1200);
+            showToast('Supabase Cloud Engine connected!', 'success');
+          } else {
+            throw new Error('Could not establish connection to the provided Supabase URL.');
+          }
+        } catch (err) {
+          if (UI.supabaseTestFeedback) {
+            UI.supabaseTestFeedback.style.background = 'rgba(231,76,60,0.15)';
+            UI.supabaseTestFeedback.style.color = 'var(--loss-color)';
+            UI.supabaseTestFeedback.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHtml(err.message)}`;
+          }
+        }
+      });
+    }
+
+    if (UI.btnSupabaseReset) {
+      UI.btnSupabaseReset.addEventListener('click', () => {
+        SupabaseBridge.resetConfig();
+        updateSupabaseStatusUI();
+        closeModal(UI.modalSupabaseConfig);
+        showToast('Reset to local offline studio engine.', 'info');
+      });
+    }
+
+    // Studio Logout
+    if (UI.btnStudioLogout) {
+      UI.btnStudioLogout.addEventListener('click', async () => {
+        if (!confirm('Lock studio on this device? You can log back in anytime.')) return;
+        await AuthEngine.logout();
+        AppState.currentUser = AuthEngine.getCurrentUser();
+        updateUserUI(AppState.currentUser);
+        openModal(UI.modalAuthHub);
+        showToast('Studio locked.', 'info');
+      });
+    }
+  };
+
+  // =========================================================================
+  // PRIVATE AUTHENTICATION MODAL
+  // =========================================================================
+  const setupAuthEventListeners = () => {
+    if (UI.tabBtnSignin && UI.tabBtnResetpass) {
+      UI.tabBtnSignin.addEventListener('click', () => {
+        UI.tabBtnSignin.style.background = 'rgba(212, 175, 55, 0.15)';
+        UI.tabBtnSignin.style.color = 'var(--gold-bright)';
+        UI.tabBtnResetpass.style.background = 'none';
+        UI.tabBtnResetpass.style.color = 'var(--text-secondary)';
+        if (UI.formAuthSignin) UI.formAuthSignin.style.display = 'block';
+        if (UI.formAuthResetpass) UI.formAuthResetpass.style.display = 'none';
+      });
+
+      UI.tabBtnResetpass.addEventListener('click', () => {
+        UI.tabBtnResetpass.style.background = 'rgba(212, 175, 55, 0.15)';
+        UI.tabBtnResetpass.style.color = 'var(--gold-bright)';
+        UI.tabBtnSignin.style.background = 'none';
+        UI.tabBtnSignin.style.color = 'var(--text-secondary)';
+        if (UI.formAuthSignin) UI.formAuthSignin.style.display = 'none';
+        if (UI.formAuthResetpass) UI.formAuthResetpass.style.display = 'block';
+      });
+    }
+
+    if (UI.formAuthSignin) {
+      UI.formAuthSignin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = UI.signinEmail.value.trim();
+        const password = UI.signinPassword.value;
+
+        try {
+          const user = await AuthEngine.login(email, password);
+          AppState.currentUser = user;
+          updateUserUI(user);
+          closeModal(UI.modalAuthHub);
+          await loadAllStudioData();
+          renderDashboard();
+          showToast(`Welcome back, ${user.gamerTag || 'NONCHALANT JR'}!`, 'success');
+        } catch (err) {
+          showToast(err.message || 'Login failed.', 'error');
+        }
+      });
+    }
+
+    if (UI.formAuthResetpass) {
+      UI.formAuthResetpass.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = UI.resetEmail.value.trim();
+        try {
+          const msg = await AuthEngine.recoverAccount(email);
+          showToast(msg, 'success');
+          UI.formAuthResetpass.reset();
+        } catch (err) {
+          showToast(err.message || 'Error requesting password reset.', 'error');
+        }
+      });
+    }
+  };
+
+  // Utility: HTML string escape
+  const escapeHtml = (str) => {
+    if (!str && str !== 0) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  // Launch Studio Engine
+  await initApp();
 });

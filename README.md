@@ -1,46 +1,106 @@
 # NONCHALANT JR STUDIO 👑⚽
-> **The Ultimate eFootball Gaming Control Centre & Tournament Arena**
+> **Private eFootball Gaming Archive & Personal Control Centre**
+> Production URL: [https://nonchalant-jr-studio.vercel.app/](https://nonchalant-jr-studio.vercel.app/)
 
-NONCHALANT JR STUDIO is a dedicated command centre for eFootball players. Record gameplay highlights, manage dynamic tactical boards, track division milestones, celebrate trophies, and host real-time tournaments with your friends across mobile and PC.
-
----
-
-## ✨ Features
-
-- 🎮 **Match Vault & Video Highlights**: Log match results, record scores, tag competitions, and attach or stream high-definition gameplay clips directly via IndexedDB.
-- 🏆 **Trophy Cabinet**: Showcase your championship honors, runner-up medals, and tournament history on a pedestal with glowing visual effects.
-- ♟️ **Tactics Board & Game Plans**: Interactive football pitch with drag-and-drop player positioning, formation presets (4-2-1-3, 4-3-3, 3-2-4-1, 5-2-3, etc.), and individual attack/defense instructions.
-- 👥 **Squad Builder & Roles**: Configure your Starting XI, substitutes bench, manager playstyles, and set-piece specialists (captains, penalties, free-kicks).
-- 📈 **Live Analytics & Progress**: Dynamic points trajectory curve, win-rate doughnut visualization, and goals scored vs conceded charts.
-- ⚔️ **Tournament Arena with Friends**: Create knockout tournaments and league standings. Generate shareable invite links, WhatsApp challenges, and instant QR codes for friends on mobile to register and play!
-- ☁️ **Local & Cloud Sync**: Built-in HTTP socket server supporting local PC access, home Wi-Fi network streaming, and Cloudflare Public Tunnels.
+NONCHALANT JR STUDIO is an exclusive, strictly private personal digital archive designed for **ONE USER ONLY (NONCHALANT JR)**. It allows you to record, organize, view, and analyze your entire eFootball gaming history with persistent online database storage, private cloud media recordings, and cross-device access.
 
 ---
 
-## 🚀 Quick Start
+## ✨ Studio Capabilities
 
-### 1. Launch Studio (One-Click)
-Double-click `Launch Studio.bat` to automatically start the background server and open the studio in your default browser.
+1. **Personal Dashboard**
+   - Live command centre showing total matches, win rate, trophies won, and video recordings.
+   - Dynamic figures calculated exclusively from your actual saved records (zero fake metrics).
+   - Recent match results feed, latest championship honors pedestal, and active game plan card.
+   - One-click quick actions to record matches, upload gameplay clips, or log trophies.
 
-### 2. Manual Terminal Launch
-Run the PowerShell server directly:
+2. **Complete Match History**
+   - Full CRUD: Record new match, edit records, view detailed summaries, or delete records.
+   - Automatic result determination (Win, Draw, Loss) calculated from scores.
+   - Tracks opponent name/gamertag, competition, match type, formation used, coach, goalscorers, tactical notes, and attached gameplay video.
+   - Instant search and filtering by opponent, competition, outcome (W/D/L), and sorting (newest, oldest, opponent A-Z).
+
+3. **Match Recordings & Highlights Vault**
+   - Private HD gameplay video upload with live progress tracking.
+   - Powered by Supabase Private Cloud Media Storage (200MB limit per clip) with local IndexedDB fallback.
+   - Tag system (Goals, Comeback, Defending, Skills, Best Match).
+   - Cinema-style video playback with full controls and download button.
+
+4. **Trophy Room & Cup History**
+   - Hall of Fame pedestal gallery for championships (🏆 1st Place), runner-up medals (🥈 2nd Place), and bronze honors (🥉 3rd Place).
+   - Records trophy title, date won, season, grand final opponent, final scoreline, and championship notes.
+   - Filter by achievement tier.
+
+5. **Game Plans & Tactical Lab**
+   - Interactive pitch chalkboard with touch and mouse drag-and-drop player positioning.
+   - Double-click any player token to customize player names.
+   - Formation presets (`4-2-1-3`, `4-3-3`, `3-2-4-1`, `5-2-3`, `4-4-2`, and `Custom`).
+   - Detailed instructions for eFootball individual offensive and defensive tactics.
+   - Duplicate, edit, favorite, and delete game plans.
+
+6. **Starting Eleven & Squad Management**
+   - Starting XI lineup builder and substitute bench.
+   - Track positions (GK, CB, LB, RB, DMF, CMF, AMF, LWF, CF, RWF), ratings, and card tiers (*Epic Booster*, *Big Time*, *Show Time*, *Highlight*, *Standard*).
+   - Manager profile with playstyle boost configurations.
+   - Dedicated set-piece specialists and captaincy assignments.
+
+7. **Statistics & Performance Telemetry**
+   - Authoritative KPIs: Matches played, W/D/L record, Win %, goals scored, goals conceded, goal difference, clean sheets, and 5-match recent form streak.
+   - High-DPI Canvas 2D charts:
+     - **Cumulative Points Trajectory Curve**: Line graph with glowing gold gradient fill.
+     - **Results Ratio Doughnut**: Donut chart with centered win percentage.
+     - **Match Goals Bar Chart**: Scored vs Conceded comparison per match.
+   - Head-to-head records table against each opponent faced.
+
+8. **Deep Personal Match Archive**
+   - Chronological vertical timeline linking matches, tactics, video recordings, and trophies into a continuous personal legacy.
+
+9. **Backup & Data Recovery**
+   - One-click master JSON export of all personal studio records.
+   - Validated backup restore with user confirmation.
+
+10. **Security & Cloud Synchronization**
+    - Secure private authentication (Supabase Auth + Web Crypto SHA-256).
+    - No public registration, no public tournament rooms, no other users.
+    - Strict database Row Level Security (`auth.uid() = user_id`) and private storage policies.
+
+---
+
+## 🚀 Running Locally
+
+### Option 1: One-Click Launch (Windows)
+Double-click `Launch Studio.bat`. It will launch the local server and open `http://localhost:5500/` in your browser.
+
+### Option 2: PowerShell Server
+Run the built-in socket server:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\server.ps1 -Port 5500
 ```
 
-### 3. Access URLs
-- **Local PC**: `http://localhost:5500/`
-- **Home Wi-Fi (Phones & Tablets)**: `http://<your-wifi-ip>:5500/`
-- **Public Cloud Tunnel**: Check `public_url.txt` or terminal output when Cloudflare tunnel is active.
+---
+
+## ☁️ Connecting Supabase for Cross-Device Sync
+
+1. Go to [https://supabase.com/](https://supabase.com/) and open your project (or create a free project).
+2. Run the SQL migrations located in `supabase/migrations/`:
+   - `supabase/migrations/20261014_init_nonchalant_studio.sql` (Creates tables & Row Level Security policies)
+   - `supabase/migrations/20261014_storage_bucket.sql` (Creates private `gameplay-media` bucket)
+3. In the studio navbar or Settings page:
+   - Click the **Cloud Engine** pill or **Open Supabase Cloud Setup Dialog**.
+   - Paste your **Supabase Project URL** and **Public Anon Key**.
+   - Click **Test & Save Connection**.
+4. All records and gameplay videos will now automatically sync to your private cloud database whenever you log in from your phone, laptop, or desktop!
 
 ---
 
-## 🛠️ Tech Stack
-- **Frontend**: Vanilla JavaScript (ES6+), HTML5, Canvas API, IndexedDB, CSS3 (Luxury Black & Gold Design System)
-- **Backend**: Native PowerShell TCP socket server (`server.ps1`) with REST APIs (`/api/tournament`, `/api/join`, `/api/public-url`)
-- **Networking**: Cloudflare Quick Tunnels for external friend invites
+## 🌐 Deploying to Vercel
 
----
+The project is built with static Vanilla HTML5, CSS3, and ES6+ JavaScript, with Supabase loaded via CDN.
 
-## 🔒 Privacy & Data
-All match recordings, tactics, squad lineups, and trophies are stored locally in your browser (IndexedDB and LocalStorage) with full JSON backup export & restore support.
+To deploy or update on Vercel:
+```bash
+git add .
+git commit -m "Complete private eFootball gaming archive for NONCHALANT JR"
+git push origin main
+```
+Vercel will automatically detect the static project and deploy the updated studio to `https://nonchalant-jr-studio.vercel.app/`.

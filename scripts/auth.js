@@ -1,94 +1,110 @@
 /**
- * NONCHALANT JR STUDIO - Authentication & User Accounts (Stage 2)
- * Manages private user accounts, session state, and account recovery.
+ * NONCHALANT JR STUDIO — Secure Authentication & Identity Engine
+ * 
+ * Supports Supabase Auth (Email & Password, Secure Sessions, Realtime Profile Sync)
+ * with a secure local fallback for offline development.
+ * Never stores plaintext passwords, and has NO hardcoded bypass PINs or backdoor passwords.
  */
 
 const AuthEngine = (() => {
-  const USERS_KEY = 'njr_studio_accounts';
-  const SESSION_KEY = 'njr_studio_active_session';
+  const USERS_KEY = 'njr_studio_accounts_v3';
+  const SESSION_KEY = 'njr_studio_active_session_v3';
 
-  // Default master account for NONCHALANT JR
-  const DEFAULT_MASTER_USER = {
-    id: 'user_nonchalant_jr',
-    username: 'nonchalant_jr',
-    gamerTag: 'NONCHALANT JR',
-    email: 'studio@nonchalantjr.com',
-    passwordHash: 'e7cf3ef4f17c3999a94f2c6f612e8a888e5b1026878e4e19398b23bd38ec221a', // hash of 'efootball2026'
-    recoveryPin: '2026',
-    securityQuestion: 'What is your favorite eFootball playstyle?',
-    securityAnswerHash: '9783515433d7b4093952f1b0a88065b796d1947b7bb1bf139b266bc339f41753', // 'quick counter'
-    division: 'Division 1 (Top 100)',
-    platform: 'PlayStation 5 & Mobile',
-    efootballId: 'NJR-904-8821',
-    favoriteClub: 'Real Madrid / Brazil XI',
-    avatarUrl: 'assets/bg.jpg',
-    createdAt: '2026-01-01T00:00:00.000Z'
+  // Secure SHA-256 local hasher using Web Crypto API
+  const hashPassword = async (password) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + '_njr_salt_secure_2026');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
-  // Simple string hash function for secure local validation
-  const hashString = (str) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash |= 0;
-    }
-    return Math.abs(hash).toString(16) + 'sec_salt_2026';
-  };
-
-  // Fetch all registered accounts
+  // Fetch local account storage (used only when offline/local fallback)
   const getAllAccounts = () => {
     try {
       const raw = localStorage.getItem(USERS_KEY);
-      if (!raw) {
-        const initial = [DEFAULT_MASTER_USER];
-        localStorage.setItem(USERS_KEY, JSON.stringify(initial));
-        return initial;
-      }
-      return JSON.parse(raw);
+      return raw ? JSON.parse(raw) : [];
     } catch (e) {
-      return [DEFAULT_MASTER_USER];
+      return [];
     }
   };
 
-  // Get current active session
+  // Get current active session user
   const getCurrentUser = () => {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) return JSON.parse(raw);
-      // Auto-login master user on first launch
-      const master = DEFAULT_MASTER_USER;
-      localStorage.setItem(SESSION_KEY, JSON.stringify(master));
-      return master;
-    } catch (e) {
-      return DEFAULT_MASTER_USER;
-    }
+    } catch (e) {}
+
+    // Default guest profile if not logged in
+    return {
+      id: 'guest_user',
+      username: 'guest',
+      gamerTag: 'NONCHALANT JR',
+      email: 'studio@nonchalantjr.com',
+      division: 'Division 1 (Top 100)',
+      platform: 'PlayStation 5 & Mobile',
+      efootballId: 'NJR-904-8821',
+      favoriteClub: 'Real Madrid / Brazil XI',
+      avatarUrl: 'assets/bg.jpg',
+      isGuest: true
+    };
   };
 
-  // Register new account
-  const register = (username, gamerTag, email, password, recoveryPin, securityQuestion, securityAnswer) => {
-    const accounts = getAllAccounts();
+  // Register new account (Supabase or Local)
+  const register = async (username, gamerTag, email, password) => {
     const cleanUsername = username.trim().toLowerCase();
+    const cleanTag = (gamerTag || username).trim();
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (accounts.some(u => u.username.toLowerCase() === cleanUsername)) {
-      throw new Error('Username already exists. Please choose another.');
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('Please enter a valid email address.');
+    }
+    if (!password || password.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
     }
 
+    if (window.SupabaseBridge && SupabaseBridge.isReady()) {
+      try {
+        const { user } = await SupabaseBridge.auth.signUp(cleanEmail, password, cleanTag, cleanUsername);
+        const profile = {
+          id: user.id,
+          username: cleanUsername,
+          gamerTag: cleanTag,
+          email: cleanEmail,
+          division: 'Division 1 (Top 100)',
+          platform: 'PlayStation 5 & Mobile',
+          efootballId: 'NJR-' + Math.floor(1000 + Math.random() * 9000),
+          avatarUrl: 'assets/bg.jpg',
+          createdAt: new Date().toISOString(),
+          isGuest: false
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
+        return profile;
+      } catch (err) {
+        throw new Error(err.message || 'Registration failed.');
+      }
+    }
+
+    // Local Fallback
+    const accounts = getAllAccounts();
+    if (accounts.some(u => u.username.toLowerCase() === cleanUsername || u.email.toLowerCase() === cleanEmail)) {
+      throw new Error('Username or email already registered. Please choose another or sign in.');
+    }
+
+    const hashed = await hashPassword(password);
     const newUser = {
       id: 'user_' + Date.now(),
       username: cleanUsername,
-      gamerTag: gamerTag.trim() || 'eFootball Pro',
-      email: email.trim(),
-      passwordHash: hashString(password),
-      recoveryPin: recoveryPin.trim(),
-      securityQuestion: securityQuestion.trim(),
-      securityAnswerHash: hashString(securityAnswer.trim().toLowerCase()),
-      division: 'Division 3',
-      platform: 'Console / PC',
+      gamerTag: cleanTag,
+      email: cleanEmail,
+      passwordHash: hashed,
+      division: 'Division 1 (Top 100)',
+      platform: 'PlayStation 5 & Mobile',
       efootballId: 'NJR-' + Math.floor(1000 + Math.random() * 9000),
-      favoriteClub: 'eFootball Custom XI',
       avatarUrl: 'assets/bg.jpg',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isGuest: false
     };
 
     accounts.push(newUser);
@@ -97,18 +113,46 @@ const AuthEngine = (() => {
     return newUser;
   };
 
-  // Sign In
-  const login = (username, password) => {
-    const accounts = getAllAccounts();
-    const cleanUsername = username.trim().toLowerCase();
-    const user = accounts.find(u => u.username.toLowerCase() === cleanUsername);
+  // Sign In (Supabase or Local)
+  const login = async (emailOrUsername, password) => {
+    const cleanId = emailOrUsername.trim().toLowerCase();
 
-    if (!user) {
-      throw new Error('Account not found with this username.');
+    if (window.SupabaseBridge && SupabaseBridge.isReady()) {
+      try {
+        await SupabaseBridge.auth.signIn(cleanId, password);
+        const profile = await SupabaseBridge.auth.getCurrentProfile();
+        const active = {
+          id: profile.id,
+          username: profile.username,
+          gamerTag: profile.gamer_tag,
+          email: profile.email,
+          division: profile.division,
+          platform: profile.platform,
+          efootballId: profile.efootball_id,
+          avatarUrl: profile.avatar_url || 'assets/bg.jpg',
+          isGuest: false
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(active));
+        return active;
+      } catch (err) {
+        throw new Error(err.message || 'Incorrect email or password.');
+      }
     }
 
-    // Check password
-    if (user.passwordHash !== hashString(password) && password !== 'efootball2026') {
+    // Local Fallback
+    const accounts = getAllAccounts();
+    const user = accounts.find(u => u.username.toLowerCase() === cleanId || u.email.toLowerCase() === cleanId);
+
+    if (!user) {
+      // If no accounts exist yet, allow initial account creation
+      if (accounts.length === 0) {
+        return register(cleanId, 'NONCHALANT JR', cleanId.includes('@') ? cleanId : `${cleanId}@nonchalantjr.com`, password);
+      }
+      throw new Error('Account not found with this username or email.');
+    }
+
+    const hashed = await hashPassword(password);
+    if (user.passwordHash !== hashed) {
       throw new Error('Incorrect studio password.');
     }
 
@@ -116,52 +160,53 @@ const AuthEngine = (() => {
     return user;
   };
 
-  // Account Recovery: Reset Password via PIN & Security Answer
-  const recoverAccount = (username, recoveryPin, newPassword) => {
-    const accounts = getAllAccounts();
-    const cleanUsername = username.trim().toLowerCase();
-    const userIndex = accounts.findIndex(u => u.username.toLowerCase() === cleanUsername);
-
-    if (userIndex === -1) {
-      throw new Error('No account found for that username.');
+  // Account Recovery: Send password reset
+  const recoverAccount = async (email) => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (window.SupabaseBridge && SupabaseBridge.isReady()) {
+      await SupabaseBridge.auth.resetPassword(cleanEmail);
+      return 'Password reset link sent to your email address.';
     }
-
-    const user = accounts[userIndex];
-    if (user.recoveryPin !== recoveryPin.trim() && recoveryPin.trim() !== '2026') {
-      throw new Error('Invalid recovery PIN. Please verify your identity code.');
-    }
-
-    // Update password
-    user.passwordHash = hashString(newPassword);
-    accounts[userIndex] = user;
-    localStorage.setItem(USERS_KEY, JSON.stringify(accounts));
-
-    // Update session if currently logged in
-    const current = getCurrentUser();
-    if (current && current.id === user.id) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    }
-
-    return true;
+    return 'Password reset email initiated (Local simulation).';
   };
 
   // Update Profile details
-  const updateProfile = (updatedFields) => {
+  const updateProfile = async (updatedFields) => {
     const current = getCurrentUser();
-    const accounts = getAllAccounts();
-    const userIndex = accounts.findIndex(u => u.id === current.id);
+
+    if (window.SupabaseBridge && SupabaseBridge.isReady() && !current.isGuest) {
+      try {
+        const dbFields = {};
+        if (updatedFields.gamerTag) dbFields.gamer_tag = updatedFields.gamerTag;
+        if (updatedFields.division) dbFields.division = updatedFields.division;
+        if (updatedFields.platform) dbFields.platform = updatedFields.platform;
+        if (updatedFields.efootballId) dbFields.efootball_id = updatedFields.efootballId;
+        if (updatedFields.avatarUrl) dbFields.avatar_url = updatedFields.avatarUrl;
+
+        await SupabaseBridge.auth.updateProfile(dbFields);
+      } catch (e) {
+        console.warn('Supabase profile update warning:', e);
+      }
+    }
 
     const merged = { ...current, ...updatedFields };
-    if (userIndex !== -1) {
-      accounts[userIndex] = merged;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(merged));
+
+    const accounts = getAllAccounts();
+    const idx = accounts.findIndex(u => u.id === current.id);
+    if (idx !== -1) {
+      accounts[idx] = { ...accounts[idx], ...updatedFields };
       localStorage.setItem(USERS_KEY, JSON.stringify(accounts));
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify(merged));
+
     return merged;
   };
 
   // Sign Out
-  const logout = () => {
+  const logout = async () => {
+    if (window.SupabaseBridge && SupabaseBridge.isReady()) {
+      try { await SupabaseBridge.auth.signOut(); } catch (e) {}
+    }
     localStorage.removeItem(SESSION_KEY);
   };
 
