@@ -1,0 +1,12 @@
+# Executable binaries (cloudflared is downloaded locally)
+cloudflared.exe
+*.exe
+
+# Runtime temporary & log files
+tunnel.log
+public_url.txt
+*.log
+
+# System files
+Thumbs.db
+.DS_Store

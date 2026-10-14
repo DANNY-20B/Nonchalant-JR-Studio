@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NONCHALANT JR STUDIO | eFootball Gaming Control Centre</title>
+  <meta name="description" content="Personal gaming control centre for eFootball players by NONCHALANT JR. Record match results, showcase tournament achievements, upload gameplay recordings, manage tactics and monitor progress.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="assets/bg.jpg">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Studio Stylesheet -->
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+  <!-- Dynamic Studio Background -->
+  <div class="studio-background"></div>
+  <div class="studio-grid-overlay"></div>
+
+  <!-- Top Studio Navbar -->
+  <header class="studio-navbar">
+    <div class="brand-section">
+      <div class="brand-logo-crest" title="NONCHALANT JR Crest">
+        <i class="fas fa-crown"></i>
+      </div>
+      <div class="brand-info">
+        <h1 class="brand-title gold-text">NONCHALANT JR</h1>
+        <span class="brand-subtitle">eFootball Gaming Studio</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-links" id="studio-nav">
+      <button class="nav-item active" data-section="recordings" id="nav-recordings">
+        <i class="fas fa-video"></i>
+        <span>Match Recordings</span>
+      </button>
+      <button class="nav-item" data-section="trophies" id="nav-trophies">
+        <i class="fas fa-trophy"></i>
+        <span>Trophy Room</span>
+      </button>
+      <button class="nav-item" data-section="tactics" id="nav-tactics">
+        <i class="fas fa-chess-board"></i>
+        <span>Game Plans & Tactics</span>
+      </button>
+      <button class="nav-item" data-section="squads" id="nav-squads">
+        <i class="fas fa-users-cog"></i>
+        <span>Squad Setups</span>
+      </button>
+      <button class="nav-item" data-section="stats" id="nav-stats">
+        <i class="fas fa-chart-line"></i>
+        <span>Statistics & Progress</span>
+      </button>
+      <button class="nav-item" data-section="tournaments" id="nav-tournaments">
+        <i class="fas fa-sitemap"></i>
+        <span>Tournament Centre</span>
+      </button>
+    </nav>
+
+    <!-- User Deck -->
+    <div class="user-deck">
+      <div class="status-badge" title="Live Studio Synchronized">
+        <span class="live-indicator"></span>
+        <span id="live-clock">--:--:-- UTC</span>
+      </div>
+
+      <button class="btn-gold" id="btn-new-recording">
+        <i class="fas fa-plus-circle"></i>
+        <span>Record Match</span>
+      </button>
+
+      <button class="btn-secondary" id="btn-backups-hub" title="Cloud Backup & Restore">
+        <i class="fas fa-cloud-download-alt"></i>
+      </button>
+
+      <div class="avatar-badge" id="user-avatar-badge" title="Gamer Profile & Settings">
+        <img src="assets/bg.jpg" alt="NONCHALANT JR Profile" id="user-avatar">
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="studio-container">
+
+    <!-- Hero Command Banner -->
+    <section class="hero-banner">
+      <div class="hero-content">
+        <div class="hero-badge-tag">
+          <i class="fas fa-bolt"></i> <span id="user-division">Division 1 (Top 100)</span>
+        </div>
+        <h2 class="hero-title">Welcome back, <span class="gold-text" id="user-gamer-tag">NONCHALANT JR</span></h2>
+        <p class="hero-desc">
+          Your personal eFootball command centre is synced and online. Manage gameplay recordings, fine-tune meta formations, celebrate championships, and dominate the competition.
+        </p>
+      </div>
+
+      <div class="hero-stats-deck">
+        <div class="stat-chip">
+          <div class="stat-chip-num" id="hero-matches-count">0</div>
+          <div class="stat-chip-label">Matches Logged</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-num" id="hero-win-rate">0%</div>
+          <div class="stat-chip-label">Win Rate</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-num" id="hero-trophies-count">0</div>
+          <div class="stat-chip-label">Trophies Won</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-num" id="hero-videos-count">0</div>
+          <div class="stat-chip-label">Gameplay Clips</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION A: MATCH RECORDINGS
+         ===================================================================== -->
+    <section class="studio-section active" id="section-recordings">
+      <div class="section-header">
+        <div class="section-heading-group">
+          <span class="section-subtitle">Studio Vault</span>
+          <h2 class="section-title">Match Recordings & Video Highlights</h2>
+        </div>
+        <div class="section-actions">
+          <button class="btn-gold" onclick="document.getElementById('btn-new-recording').click()">
+            <i class="fas fa-upload"></i> Upload Gameplay Clip
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <i class="fas fa-search"></i>
+          <input type="text" class="search-input" id="search-recordings" placeholder="Search opponent, tag, or notes...">
+        </div>
+
+        <select class="filter-select" id="filter-competition">
+          <option value="all">All Competitions</option>
+          <option value="Division 1 Online">Division 1 Online</option>
+          <option value="Division 1 Elite">Division 1 Elite</option>
+          <option value="eFootball Global Cup Final">eFootball Global Cup</option>
+          <option value="eFootball Championship Qualifier">Championship Qualifier</option>
+        </select>
+
+        <select class="filter-select" id="filter-result">
+          <option value="all">All Results</option>
+          <option value="W">Wins Only (W)</option>
+          <option value="D">Draws Only (D)</option>
+          <option value="L">Losses Only (L)</option>
+        </select>
+      </div>
+
+      <!-- Video Recordings Grid -->
+      <div class="recordings-grid" id="recordings-grid">
+        <!-- Injected via app.js -->
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION B: TOURNAMENT TROPHY ROOM
+         ===================================================================== -->
+    <section class="studio-section" id="section-trophies">
+      <div class="section-header">
+        <div class="section-heading-group">
+          <span class="section-subtitle">Hall of Fame</span>
+          <h2 class="section-title">Tournament Trophy Room</h2>
+        </div>
+        <div class="section-actions">
+          <select class="filter-select" id="filter-trophy-tier">
+            <option value="all">All Accolades</option>
+            <option value="champion">Championships Only (Gold)</option>
+            <option value="runner_up">Runner-up Finishes (Silver)</option>
+          </select>
+          <button class="btn-gold" id="btn-new-trophy">
+            <i class="fas fa-trophy"></i> Log New Trophy
+          </button>
+        </div>
+      </div>
+
+      <!-- Trophies Grid -->
+      <div class="trophy-cabinet-grid" id="trophies-grid">
+        <!-- Injected via app.js -->
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION C: GAME PLANS & TACTICS
+         ===================================================================== -->
+    <section class="studio-section" id="section-tactics">
+      <div class="section-header">
+        <div class="section-heading-group">
+          <span class="section-subtitle">Tactical Lab</span>
+          <h2 class="section-title">Game Plans & Formations</h2>
+        </div>
+        <div class="section-actions" id="tactics-actions-group">
+          <button class="btn-gold" id="btn-create-tactic">
+            <i class="fas fa-plus-circle"></i> Create Game Plan
+          </button>
+          <button class="btn-secondary" id="btn-edit-tactic" style="display: none;">
+            <i class="fas fa-sliders-h"></i> Edit Strategy
+          </button>
+          <button class="btn-icon danger" id="btn-delete-tactic" title="Delete Game Plan" style="display: none; width: 42px; height: 42px;">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="tactics-layout">
+        <!-- Interactive Football Pitch -->
+        <div class="pitch-container" id="tactics-pitch-container">
+          <div class="football-field" id="tactics-field">
+            <div class="field-half-line"></div>
+            <div class="field-center-circle"></div>
+            <div class="field-center-dot"></div>
+            <div class="field-penalty-top"></div>
+            <div class="field-penalty-bottom"></div>
+            <!-- Player nodes or empty pitch overlay injected via app.js with interactive drag support -->
+          </div>
+        </div>
+
+        <!-- Tactics Details & Instructions -->
+        <div class="tactics-controls" id="tactics-controls-panel">
+          <!-- Populated dynamically via app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION D: SQUAD SETUPS
+         ===================================================================== -->
+    <section class="studio-section" id="section-squads">
+      <div class="section-header">
+        <div class="section-heading-group">
+          <span class="section-subtitle">Roster Management</span>
+          <h2 class="section-title">Starting XI & Substitute Lineups</h2>
+        </div>
+        <div class="section-actions">
+          <button class="btn-gold" id="btn-edit-coach">
+            <i class="fas fa-user-tie"></i> Edit Coach & Roles
+          </button>
+          <button class="btn-secondary" id="btn-add-player">
+            <i class="fas fa-user-plus"></i> Add Player
+          </button>
+        </div>
+      </div>
+
+      <div class="squad-layout">
+        <!-- Manager Card -->
+        <div class="manager-card">
+          <div class="manager-avatar-wrap">
+            <img src="assets/bg.jpg" alt="Manager Profile">
+          </div>
+          <h3 class="manager-name" id="manager-name">Pep Guardiola</h3>
+          <div class="manager-playstyle" id="manager-playstyle">Quick Counter / Possession (88)</div>
+          <div class="boost-tag" id="manager-boost">+1 Acceleration & +1 Tight Possession</div>
+
+          <div style="margin-top: 1.5rem; text-align: left; border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-family: var(--font-mono);">Assigned Team Roles</div>
+            <div id="roles-list">
+              <!-- Injected via app.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Starting XI & Bench -->
+        <div>
+          <div class="glass-panel" style="margin-bottom: 1.5rem;">
+            <h3 style="font-family: var(--font-title); font-size: 1.2rem; margin-bottom: 1rem;">
+              <i class="fas fa-star" style="color: var(--gold-bright);"></i> Starting Eleven
+            </h3>
+            <div class="starting-xi-grid" id="starting-xi-grid">
+              <!-- Injected via app.js -->
+            </div>
+          </div>
+
+          <div class="glass-panel">
+            <h3 style="font-family: var(--font-title); font-size: 1.2rem; margin-bottom: 1rem;">
+              <i class="fas fa-exchange-alt" style="color: var(--gold-primary);"></i> Substitute Bench
+            </h3>
+            <div class="substitutes-row" id="subs-row">
+              <!-- Injected via app.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION E: STATISTICS & PROGRESS
+         ===================================================================== -->
+    <section class="studio-section" id="section-stats">
+      <div class="section-header">
+        <div class="section-heading-group">
+          <span class="section-subtitle">Performance Telemetry</span>
+          <h2 class="section-title">Gaming Statistics & Form History</h2>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="stats-kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-gamepad"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-matches">0</div>
+            <div class="kpi-label">Matches Played</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="color: var(--win-color);"><i class="fas fa-trophy"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-wins" style="color: var(--win-color);">0</div>
+            <div class="kpi-label">Victories (W)</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="color: var(--draw-color);"><i class="fas fa-handshake"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-draws" style="color: var(--draw-color);">0</div>
+            <div class="kpi-label">Draws (D)</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="color: var(--loss-color);"><i class="fas fa-times-circle"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-losses" style="color: var(--loss-color);">0</div>
+            <div class="kpi-label">Defeats (L)</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number gold-text" id="kpi-winrate">0%</div>
+            <div class="kpi-label">Win Rate</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-futbol"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-goals-scored">0</div>
+            <div class="kpi-label">Goals Scored</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-shield-virus"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-goals-conceded">0</div>
+            <div class="kpi-label">Goals Conceded</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-plus-minus"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-goal-diff">+0</div>
+            <div class="kpi-label">Goal Difference</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-lock"></i></div>
+          <div class="kpi-data">
+            <div class="kpi-number" id="kpi-clean-sheets">0</div>
+            <div class="kpi-label">Clean Sheets</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap"><i class="fas fa-fire"></i></div>
+          <div class="kpi-data">
+            <div class="form-streak-wrap" id="form-streak-container"></div>
+            <div class="kpi-label" style="margin-top: 0.4rem;">Recent Form</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Charts Row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3 class="chart-title"><i class="fas fa-chart-area gold-text"></i> Cumulative Points Trajectory</h3>
+            <span style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--gold-light);">Performance Curve</span>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="chart-trajectory"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3 class="chart-title"><i class="fas fa-chart-pie gold-text"></i> Results Ratio</h3>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="chart-results-doughnut"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-top: 2rem;">
+        <div class="chart-header">
+          <h3 class="chart-title"><i class="fas fa-chart-bar gold-text"></i> Match Goals: Scored (Gold) vs Conceded (Red)</h3>
+        </div>
+        <div class="chart-canvas-wrapper" style="height: 200px;">
+          <canvas id="chart-goals-bar"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION F: TOURNAMENT CENTRE
+         ===================================================================== -->
+    <section class="studio-section" id="section-tournaments">
+      <div class="section-header">
+        <div class="section-heading-group">
+          <span class="section-subtitle">Championship Arena</span>
+          <h2 class="section-title">Tournament Centre & Knockout Brackets</h2>
+        </div>
+        <div class="section-actions">
+          <button class="btn-gold" id="btn-invite-tournament">
+            <i class="fas fa-share-alt"></i> Invite Friends (Link)
+          </button>
+          <button class="btn-gold" id="btn-create-tournament">
+            <i class="fas fa-plus-circle"></i> Create Tournament
+          </button>
+          <button class="btn-secondary" id="btn-record-tourney-match">
+            <i class="fas fa-futbol"></i> Record Match Result
+          </button>
+          <button class="btn-secondary" id="btn-crown-champion">
+            <i class="fas fa-crown"></i> Crown Champion
+          </button>
+        </div>
+      </div>
+
+      <!-- Knockout Bracket -->
+      <div class="glass-panel" style="margin-bottom: 2rem;">
+        <h3 style="font-family: var(--font-title); font-size: 1.3rem; margin-bottom: 1rem;">
+          <i class="fas fa-project-diagram gold-text"></i> Interactive Knockout Bracket
+        </h3>
+        <div class="bracket-container" id="bracket-tree-container">
+          <!-- Injected via app.js -->
+        </div>
+      </div>
+
+      <!-- League Standings Table -->
+      <div class="glass-panel">
+        <h3 style="font-family: var(--font-title); font-size: 1.3rem; margin-bottom: 1rem;">
+          <i class="fas fa-list-ol gold-text"></i> Tournament Group Stage Standings
+        </h3>
+        <div class="league-table-wrap">
+          <table class="studio-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Team</th>
+                <th>P</th>
+                <th>W</th>
+                <th>D</th>
+                <th>L</th>
+                <th>GF</th>
+                <th>GA</th>
+                <th>GD</th>
+                <th>PTS</th>
+              </tr>
+            </thead>
+            <tbody id="league-standings-tbody">
+              <!-- Injected via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tournament Matches Log & Champions Archive -->
+      <div class="glass-panel" style="margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.8rem;">
+          <h3 style="font-family: var(--font-title); font-size: 1.3rem;">
+            <i class="fas fa-history gold-text"></i> Tournament Matches & Champions History
+          </h3>
+          <span style="font-size: 0.82rem; font-family: var(--font-mono); color: var(--gold-bright);">
+            <i class="fas fa-trophy"></i> Recorded Tournament Matches & Champions
+          </span>
+        </div>
+        <div id="tournament-matches-log-container">
+          <!-- Injected via app.js -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =====================================================================
+       MODALS
+       ===================================================================== -->
+
+  <!-- Modal: Record New Match (Stage 3 & 4) -->
+  <div class="modal-overlay" id="modal-new-match">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Record Match & Upload Gameplay</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-new-match">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Opponent Gamer Tag / Team</label>
+              <input type="text" class="form-control" id="match-opponent" placeholder="e.g. NeoTokyo_FC" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Competition</label>
+              <select class="form-control" id="match-competition">
+                <option value="Division 1 Online">Division 1 Online</option>
+                <option value="Division 1 Elite">Division 1 Elite</option>
+                <option value="eFootball Global Cup Final">eFootball Global Cup</option>
+                <option value="eFootball Championship Qualifier">Championship Qualifier</option>
+                <option value="Co-op Match">Co-op Match</option>
+                <option value="Friendly Showcase">Friendly Showcase</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">My Score (NONCHALANT JR)</label>
+              <input type="number" class="form-control" id="match-my-score" min="0" value="3" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Opponent Score</label>
+              <input type="number" class="form-control" id="match-opp-score" min="0" value="1" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Match Date</label>
+              <input type="date" class="form-control" id="match-date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Highlight Tags (comma-separated)</label>
+              <input type="text" class="form-control" id="match-tags" placeholder="Best Goal, Comeback, Final, Stunner">
+            </div>
+          </div>
+
+          <!-- Video Upload & Cloud Progress (Stage 4) -->
+          <div class="form-group">
+            <label class="form-label">Gameplay Recording Video (MP4 / WebM / MOV)</label>
+            <div class="upload-dropzone" onclick="document.getElementById('match-video-file').click()">
+              <i class="fas fa-cloud-upload-alt upload-icon"></i>
+              <div style="font-size: 0.95rem; font-weight: 600; color: #fff;">Click or Drag Video File Here</div>
+              <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.3rem;">Stored safely in your device storage & streaming engine</div>
+              <input type="file" id="match-video-file" accept="video/*" style="display: none;">
+            </div>
+
+            <!-- Upload Progress Bar -->
+            <div class="progress-bar-wrap" id="upload-progress-wrap">
+              <div class="progress-bar-fill" id="upload-progress-fill"></div>
+            </div>
+            <div id="upload-progress-text" style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--gold-light); margin-top: 4px; text-align: right;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Or External Video Clip Link (YouTube, Twitch, Streamable)</label>
+            <input type="url" class="form-control" id="match-video-url" placeholder="https://youtube.com/watch?v=... or direct MP4 link">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tactical Notes & Key Moments</label>
+            <textarea class="form-control" id="match-notes" rows="3" placeholder="Key tactical decisions, substitutions, goals scored, and opponent playstyle analysis..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-save"></i> Save Match Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Log New Trophy (Stage 3) -->
+  <div class="modal-overlay" id="modal-new-trophy">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Record Tournament Achievement</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-new-trophy">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Tournament Name</label>
+            <input type="text" class="form-control" id="trophy-title-input" placeholder="e.g. eFootball Championship Season 4" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Placement Tier</label>
+              <select class="form-control" id="trophy-placement-input">
+                <option value="champion">🏆 Champion (1st Place)</option>
+                <option value="runner_up">🥈 Runner-Up (2nd Place)</option>
+                <option value="bronze">🥉 3rd Place / Bronze</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tournament Date</label>
+              <input type="date" class="form-control" id="trophy-date-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Grand Final Opponent</label>
+              <input type="text" class="form-control" id="trophy-opponent-input" placeholder="e.g. Apex_Striker_99">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Final Scoreline</label>
+              <input type="text" class="form-control" id="trophy-score-input" placeholder="3 - 1">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Championship Notes & Highlights</label>
+            <textarea class="form-control" id="trophy-notes-input" rows="3" placeholder="Key moments that defined this championship victory..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-trophy"></i> Add to Trophy Room</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cinema Video Player (Stage 4) -->
+  <div class="modal-overlay cinema-modal" id="modal-cinema-player">
+    <div class="modal-content">
+      <div class="modal-header" style="background: #000; border-bottom: 1px solid rgba(212, 175, 55, 0.4);">
+        <div>
+          <h3 class="modal-title" id="cinema-video-title" style="font-size: 1.15rem;">Gameplay Playback</h3>
+          <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--gold-light);" id="cinema-video-meta"></span>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center;">
+          <button class="btn-gold" id="cinema-download-btn" style="padding: 0.35rem 0.8rem; font-size: 0.8rem;">
+            <i class="fas fa-download"></i> Download Video
+          </button>
+          <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="cinema-video-frame">
+        <video id="cinema-video-player" controls playsinline preload="auto">
+          Your browser does not support HTML5 video playback.
+        </video>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Account Profile & Privacy (Stage 2) -->
+  <div class="modal-overlay" id="modal-account">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Gamer Profile & Studio Identity</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-account-profile">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Gamer Tag</label>
+              <input type="text" class="form-control" id="account-gamertag-input" value="NONCHALANT JR" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">eFootball Division</label>
+              <input type="text" class="form-control" id="account-division-input" value="Division 1 (Top 100)">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">eFootball User ID</label>
+              <input type="text" class="form-control" id="account-efootball-id" value="NJR-904-8821">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Primary Gaming Platform</label>
+              <input type="text" class="form-control" id="account-platform-input" value="PlayStation 5 & Mobile">
+            </div>
+          </div>
+
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--gold-border); border-radius: var(--border-radius-sm); padding: 1rem; margin-top: 1rem;">
+            <div style="font-weight: 700; color: var(--gold-light); margin-bottom: 0.3rem;"><i class="fas fa-shield-alt"></i> Account Security & Recovery</div>
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
+              Your records follow this profile across any device. If you ever forget your password, you can use your recovery PIN.
+            </p>
+            <button type="button" class="btn-secondary" style="font-size: 0.82rem;" onclick="document.getElementById('modal-recovery').classList.add('active'); document.getElementById('modal-account').classList.remove('active');">
+              <i class="fas fa-key"></i> Open Account Recovery Tool
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Close</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-check"></i> Update Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Account Recovery (Stage 2) -->
+  <div class="modal-overlay" id="modal-recovery">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Studio Account Recovery</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-recovery">
+        <div class="modal-body">
+          <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.2rem;">
+            Enter your username and private 4-digit recovery PIN to reset your studio access.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" id="recovery-username" value="nonchalant_jr" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Private Recovery PIN</label>
+            <input type="password" class="form-control" id="recovery-pin" placeholder="Enter PIN (Default: 2026)" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-control" id="recovery-new-pass" placeholder="Enter new studio password" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-unlock-alt"></i> Reset Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cloud Backup & Multi-Device Sync Hub (Stage 7) -->
+  <div class="modal-overlay" id="modal-backups">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Studio Backup & Cross-Device Sync</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(212, 175, 55, 0.08); border: 1px solid var(--gold-border); border-radius: var(--border-radius-sm); padding: 1.2rem; margin-bottom: 1.5rem;">
+          <h4 style="color: var(--gold-bright); margin-bottom: 0.4rem;"><i class="fas fa-cloud"></i> Portable Gaming Archive</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+            Export your entire studio archive (matches, trophies, tactics, squad lineups, and tournament history) as a lightweight encrypted backup. You can load this file onto your phone, tablet, or another computer anytime!
+          </p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <button class="btn-gold" id="btn-export-backup" style="justify-content: center; padding: 0.8rem;">
+            <i class="fas fa-file-export"></i> Download Studio Backup (.JSON)
+          </button>
+
+          <label class="btn-secondary" style="justify-content: center; padding: 0.8rem; cursor: pointer; text-align: center;">
+            <i class="fas fa-file-import"></i> Restore from Backup File (.JSON)
+            <input type="file" id="file-import-backup" accept=".json" style="display: none;">
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary btn-modal-cancel">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Tournament with Friends -->
+  <div class="modal-overlay" id="modal-create-tournament">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Tournament with Friends</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-create-tournament">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Tournament Name</label>
+            <input type="text" class="form-control" id="tournament-name-input" placeholder="e.g. NONCHALANT JR Weekend Cup" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tournament Format</label>
+            <select class="form-control" id="tournament-format-input">
+              <option value="knockout">🏆 Single Elimination Knockout (Bracket Tree)</option>
+              <option value="league">📊 League Table / Round Robin</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Add Friend / Participant</label>
+            <div style="display: flex; gap: 0.6rem;">
+              <input type="text" class="form-control" id="input-friend-name" placeholder="Friend Gamer Tag / Team Name">
+              <button type="button" class="btn-gold" id="btn-add-friend-pill" style="white-space: nowrap;">
+                <i class="fas fa-user-plus"></i> Add
+              </button>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.4rem;">
+              Add at least 2 participants (e.g. 4 or 8 friends for knockout bracket).
+            </div>
+            <div class="friends-list-wrap" id="friends-list-wrap">
+              <!-- Friend tags injected here -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-trophy"></i> Generate Tournament</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Squad Coach & Roles -->
+  <div class="modal-overlay" id="modal-edit-coach">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Manager & Team Roles</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-edit-coach">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Manager / Coach Name</label>
+              <input type="text" class="form-control" id="coach-name-input" placeholder="e.g. Pep Guardiola, Carlo Ancelotti" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Manager Playstyle</label>
+              <select class="form-control" id="coach-playstyle-input">
+                <option value="Quick Counter">Quick Counter</option>
+                <option value="Possession Game">Possession Game</option>
+                <option value="Long Ball Counter">Long Ball Counter</option>
+                <option value="Out Wide">Out Wide</option>
+                <option value="Long Ball">Long Ball</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Stat Boost Description</label>
+            <input type="text" class="form-control" id="coach-boost-input" placeholder="e.g. +1 Acceleration, +1 Tight Possession">
+          </div>
+
+          <h4 style="font-family: var(--font-mono); font-size: 0.85rem; text-transform: uppercase; color: var(--gold-light); margin: 1rem 0 0.6rem;">
+            Assigned Player Roles
+          </h4>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Captain (C)</label>
+              <input type="text" class="form-control" id="role-captain-input" placeholder="e.g. Lionel Messi">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Penalty Taker</label>
+              <input type="text" class="form-control" id="role-penalty-input" placeholder="e.g. Cristiano Ronaldo">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Short Free-Kick</label>
+              <input type="text" class="form-control" id="role-shortfk-input" placeholder="e.g. Lionel Messi">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Long Free-Kick</label>
+              <input type="text" class="form-control" id="role-longfk-input" placeholder="e.g. Roberto Carlos">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-save"></i> Save Coach & Roles</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Player -->
+  <div class="modal-overlay" id="modal-add-player">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Player to Squad</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-add-player">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Squad Slot</label>
+              <select class="form-control" id="player-slot-input">
+                <option value="startingXI">Starting Eleven</option>
+                <option value="subs">Substitute Bench</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Position</label>
+              <select class="form-control" id="player-pos-input">
+                <option value="GK">GK - Goalkeeper</option>
+                <option value="CB">CB - Centre Back</option>
+                <option value="LB">LB - Left Back</option>
+                <option value="RB">RB - Right Back</option>
+                <option value="DMF">DMF - Defensive Midfielder</option>
+                <option value="CMF">CMF - Central Midfielder</option>
+                <option value="AMF">AMF - Attacking Midfielder</option>
+                <option value="LWF">LWF - Left Winger</option>
+                <option value="RWF">RWF - Right Winger</option>
+                <option value="SS">SS - Second Striker</option>
+                <option value="CF">CF - Centre Forward</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Player Name</label>
+            <input type="text" class="form-control" id="player-name-input" placeholder="e.g. L. Messi, K. Mbappé, V. van Dijk" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Overall Rating</label>
+              <input type="number" class="form-control" id="player-rating-input" min="50" max="110" value="95" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Card Tier</label>
+              <select class="form-control" id="player-tier-input">
+                <option value="Epic Booster">Epic Booster</option>
+                <option value="Big Time">Big Time</option>
+                <option value="Show Time">Show Time</option>
+                <option value="Highlight">Highlight</option>
+                <option value="Standard">Standard</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-plus"></i> Add Player</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Create Game Plan & Tactics -->
+  <div class="modal-overlay" id="modal-create-tactic">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-clipboard-list gold-text"></i> Create Game Plan & Tactics</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-create-tactic">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Game Plan Name</label>
+              <input type="text" class="form-control" id="tactic-name-input" placeholder="e.g. Primary 4-3-3 Quick Counter" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Formation</label>
+              <select class="form-control" id="tactic-formation-input" required>
+                <option value="4-3-3">4-3-3 (Attackers & Wingers)</option>
+                <option value="4-2-1-3">4-2-1-3 (Dual DMF + AMF)</option>
+                <option value="4-4-2">4-4-2 (Classic Flat / Twin Strikers)</option>
+                <option value="4-1-2-3">4-1-2-3 (Lone Pivot + Dual AMF)</option>
+                <option value="3-2-4-1">3-2-4-1 (Modern Box Midfield)</option>
+                <option value="5-2-3">5-2-3 (Solid 5-Back Counter)</option>
+                <option value="4-2-2-2">4-2-2-2 (Dual AMF / Twin CF)</option>
+                <option value="3-4-3">3-4-3 (High Press & Width)</option>
+                <option value="Custom">Custom Formation</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Team Playstyle</label>
+              <select class="form-control" id="tactic-playstyle-input" required>
+                <option value="Quick Counter">Quick Counter</option>
+                <option value="Possession Game">Possession Game</option>
+                <option value="Long Ball Counter">Long Ball Counter</option>
+                <option value="Out Wide">Out Wide</option>
+                <option value="Long Ball">Long Ball</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tactical Description & Strategy</label>
+            <textarea class="form-control" id="tactic-desc-input" rows="2" placeholder="e.g. Rapid transitions exploiting opponent fullbacks on the break." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">When to Deploy This Game Plan</label>
+            <input type="text" class="form-control" id="tactic-whentouse-input" placeholder="e.g. Starting setup for Division 1 or when chasing goals in second half." required>
+          </div>
+
+          <h4 style="font-family: var(--font-mono); font-size: 0.85rem; text-transform: uppercase; color: var(--gold-light); margin: 1rem 0 0.6rem;">
+            Individual Player Instructions (eFootball)
+          </h4>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Attacking Instruction 1</label>
+              <select class="form-control" id="tactic-atk1-input">
+                <option value="None">None</option>
+                <option value="Anchoring">Anchoring</option>
+                <option value="Counter Target">Counter Target</option>
+                <option value="False Nine">False Nine</option>
+                <option value="Attacking Fullback">Attacking Fullback</option>
+                <option value="Wing Rotation">Wing Rotation</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Attacking Instruction 2</label>
+              <select class="form-control" id="tactic-atk2-input">
+                <option value="None">None</option>
+                <option value="Anchoring">Anchoring</option>
+                <option value="Counter Target">Counter Target</option>
+                <option value="False Nine">False Nine</option>
+                <option value="Attacking Fullback">Attacking Fullback</option>
+                <option value="Wing Rotation">Wing Rotation</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Defensive Instruction 1</label>
+              <select class="form-control" id="tactic-def1-input">
+                <option value="None">None</option>
+                <option value="Deep Defensive Line">Deep Defensive Line</option>
+                <option value="Defensive">Defensive</option>
+                <option value="Tight Marking">Tight Marking</option>
+                <option value="Swarm The Box">Swarm The Box</option>
+                <option value="Gegenpress">Gegenpress</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Defensive Instruction 2</label>
+              <select class="form-control" id="tactic-def2-input">
+                <option value="None">None</option>
+                <option value="Deep Defensive Line">Deep Defensive Line</option>
+                <option value="Defensive">Defensive</option>
+                <option value="Tight Marking">Tight Marking</option>
+                <option value="Swarm The Box">Swarm The Box</option>
+                <option value="Gegenpress">Gegenpress</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-check"></i> Deploy Game Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Game Plan & Strategy -->
+  <div class="modal-overlay" id="modal-edit-tactic">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-sliders-h gold-text"></i> Edit Game Plan Strategy</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-edit-tactic">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Game Plan Name</label>
+              <input type="text" class="form-control" id="edit-tactic-name-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Team Playstyle</label>
+              <select class="form-control" id="edit-tactic-playstyle-input" required>
+                <option value="Quick Counter">Quick Counter</option>
+                <option value="Possession Game">Possession Game</option>
+                <option value="Long Ball Counter">Long Ball Counter</option>
+                <option value="Out Wide">Out Wide</option>
+                <option value="Long Ball">Long Ball</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tactical Description & Strategy</label>
+            <textarea class="form-control" id="edit-tactic-desc-input" rows="2" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">When to Deploy This Game Plan</label>
+            <input type="text" class="form-control" id="edit-tactic-whentouse-input" required>
+          </div>
+
+          <h4 style="font-family: var(--font-mono); font-size: 0.85rem; text-transform: uppercase; color: var(--gold-light); margin: 1rem 0 0.6rem;">
+            Individual Player Instructions
+          </h4>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Attacking Instruction 1</label>
+              <select class="form-control" id="edit-tactic-atk1-input">
+                <option value="None">None</option>
+                <option value="Anchoring">Anchoring</option>
+                <option value="Counter Target">Counter Target</option>
+                <option value="False Nine">False Nine</option>
+                <option value="Attacking Fullback">Attacking Fullback</option>
+                <option value="Wing Rotation">Wing Rotation</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Attacking Instruction 2</label>
+              <select class="form-control" id="edit-tactic-atk2-input">
+                <option value="None">None</option>
+                <option value="Anchoring">Anchoring</option>
+                <option value="Counter Target">Counter Target</option>
+                <option value="False Nine">False Nine</option>
+                <option value="Attacking Fullback">Attacking Fullback</option>
+                <option value="Wing Rotation">Wing Rotation</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Defensive Instruction 1</label>
+              <select class="form-control" id="edit-tactic-def1-input">
+                <option value="None">None</option>
+                <option value="Deep Defensive Line">Deep Defensive Line</option>
+                <option value="Defensive">Defensive</option>
+                <option value="Tight Marking">Tight Marking</option>
+                <option value="Swarm The Box">Swarm The Box</option>
+                <option value="Gegenpress">Gegenpress</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Defensive Instruction 2</label>
+              <select class="form-control" id="edit-tactic-def2-input">
+                <option value="None">None</option>
+                <option value="Deep Defensive Line">Deep Defensive Line</option>
+                <option value="Defensive">Defensive</option>
+                <option value="Tight Marking">Tight Marking</option>
+                <option value="Swarm The Box">Swarm The Box</option>
+                <option value="Gegenpress">Gegenpress</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-save"></i> Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Invite Friends to Tournament -->
+  <div class="modal-overlay" id="modal-invite-tournament">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-share-alt gold-text"></i> Invite Friends to Tournament</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(22, 24, 34, 0.7); border: 1px solid var(--gold-border); border-radius: var(--border-radius-sm); padding: 1rem; margin-bottom: 1.2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <span style="font-size: 0.82rem; font-family: var(--font-mono); color: var(--gold-bright); text-transform: uppercase;">Active Tournament Challenge</span>
+            <span class="badge" style="background: rgba(46, 204, 113, 0.15); color: var(--win-color); border: 1px solid var(--win-color); font-size: 0.75rem; padding: 2px 8px; border-radius: 12px;">Ready to Compete</span>
+          </div>
+          <h4 style="font-family: var(--font-title); font-size: 1.2rem; color: #fff; margin-bottom: 0.2rem;" id="invite-tourney-name-display">NONCHALANT JR Championship</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">Host: <strong style="color: #fff;" id="invite-tourney-host-display">NONCHALANT JR</strong> • Single Elimination Knockout</p>
+        </div>
+
+        <label class="form-label"><i class="fas fa-link"></i> Shareable Tournament Invite Link</label>
+        <div class="invite-link-group">
+          <input type="text" class="invite-link-input" id="tournament-invite-url" readonly>
+          <button type="button" class="btn-gold" id="btn-copy-invite-link" style="white-space: nowrap;">
+            <i class="fas fa-copy"></i> Copy Link
+          </button>
+        </div>
+
+        <label class="form-label" style="margin-top: 1rem;"><i class="fas fa-paper-plane"></i> Quick Share to Friends</label>
+        <div class="share-channels-grid">
+          <a href="#" target="_blank" class="btn-share-channel btn-share-whatsapp" id="btn-share-whatsapp">
+            <i class="fab fa-whatsapp" style="font-size: 1.1rem;"></i> WhatsApp
+          </a>
+          <button type="button" class="btn-share-channel btn-share-discord" id="btn-share-discord">
+            <i class="fab fa-discord" style="font-size: 1.1rem;"></i> Copy Message
+          </button>
+          <button type="button" class="btn-share-channel btn-share-native" id="btn-share-native">
+            <i class="fas fa-mobile-alt"></i> Share on Phone
+          </button>
+        </div>
+
+        <!-- Instant QR Code for Phones -->
+        <div class="qr-card">
+          <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem;">
+            <i class="fas fa-qrcode gold-text"></i> Instant Mobile Scan
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+            Friends can scan this QR code with their phone camera to open and join directly!
+          </p>
+          <img src="" alt="Tournament QR Code" class="qr-code-img" id="invite-qr-image">
+        </div>
+
+        <!-- Local Network / Wi-Fi Access helper -->
+        <div class="lan-tip-box">
+          <i class="fas fa-wifi gold-text" style="font-size: 1.1rem; margin-top: 2px;"></i>
+          <div>
+            <strong style="color: #fff;">Playing on the Same Wi-Fi Network?</strong>
+            <p style="margin-top: 2px;">If your friends are connected to your home Wi-Fi or hotspot, send them the link with your PC's IP address (shown in the Launch Studio terminal e.g. <span style="font-family: var(--font-mono); color: var(--gold-bright);">http://192.168.x.x:5500</span>) so they can open the studio right from their phone!</p>
+          </div>
+        </div>
+
+        <!-- Quick Add Friend by Gamer Tag -->
+        <div style="margin-top: 1.2rem; border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+          <label class="form-label"><i class="fas fa-user-plus"></i> Or Add Friend Directly to Roster</label>
+          <div style="display: flex; gap: 0.6rem;">
+            <input type="text" class="form-control" id="invite-friend-gamertag" placeholder="Friend Gamer Tag (e.g. Alex_Strike, NeoTokyo_FC)">
+            <button type="button" class="btn-gold" id="btn-invite-add-friend" style="white-space: nowrap;">
+              <i class="fas fa-plus"></i> Add to Roster
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary btn-modal-cancel">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Accept Tournament Invitation (Triggered via Link) -->
+  <div class="modal-overlay" id="modal-join-tournament">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-trophy gold-text"></i> Tournament Challenge Received!</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-join-tournament">
+        <div class="modal-body">
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 3rem; filter: drop-shadow(0 0 15px gold); margin-bottom: 0.5rem;">⚔️</div>
+            <h3 style="font-family: var(--font-title); font-size: 1.35rem; color: #fff;" id="join-tourney-name">NONCHALANT JR Championship</h3>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.3rem;" id="join-tourney-inviter">
+              You've been challenged by <strong style="color: var(--gold-bright);">NONCHALANT JR</strong> to compete on the pitch!
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Your Gamer Tag / Team Name</label>
+            <input type="text" class="form-control" id="join-friend-gamertag" placeholder="e.g. NeoTokyo_FC, Striker99" required autofocus>
+            <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.3rem;">
+              This name will appear on the tournament bracket and standings table.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Decline</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-bolt"></i> Accept Challenge & Join</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Record Tournament Match Result -->
+  <div class="modal-overlay" id="modal-record-tourney-match">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-futbol gold-text"></i> Record Tournament Match Result</h3>
+        <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="form-record-tourney-match">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Tournament Stage</label>
+            <select class="form-control" id="tourney-match-stage-select">
+              <option value="Group Stage">Group Stage / League Match</option>
+              <option value="Quarter-Finals">Quarter-Finals</option>
+              <option value="Semi-Finals">Semi-Finals</option>
+              <option value="Grand Final">👑 Grand Final</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Participant / Team 1</label>
+              <select class="form-control" id="tourney-match-team1-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Score (Team 1)</label>
+              <input type="number" class="form-control" id="tourney-match-score1-input" min="0" value="0" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Participant / Team 2</label>
+              <select class="form-control" id="tourney-match-team2-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Score (Team 2)</label>
+              <input type="number" class="form-control" id="tourney-match-score2-input" min="0" value="0" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Match Date</label>
+            <input type="date" class="form-control" id="tourney-match-date-input">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn-gold"><i class="fas fa-save"></i> Save & Record Result</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript Modules -->
+  <script src="scripts/storage.js"></script>
+  <script src="scripts/auth.js"></script>
+  <script src="scripts/demo-data.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
